@@ -101,7 +101,7 @@ things:
 ## Development
 
 ```bash
-bun install
+npm install
 make build      # validates theme packs, builds the CLI
 make plugin     # builds the plugin -> main.js
 make install    # installs into a vault (VAULT=... to pick one)

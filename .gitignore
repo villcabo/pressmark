@@ -2,7 +2,6 @@
 /cli/internal/themes/packs/
 /dist/
 /main.js
-/plugin/node_modules/
 /node_modules/
 
 # Salida de pruebas
@@ -13,4 +12,4 @@
 # Entorno
 .env
 .DS_Store
-/plugin/src/themes.generated.ts
+/src/themes.generated.ts

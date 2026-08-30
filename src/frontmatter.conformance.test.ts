@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mergeVars, splitFrontmatter, titleFor } from "./document";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(
   readFileSync(join(ROOT, "testdata/conformance/frontmatter.json"), "utf8"),
 ) as Case[];

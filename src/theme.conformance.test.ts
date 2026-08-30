@@ -8,7 +8,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { load, type ThemeFS } from "./theme";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(
   readFileSync(join(ROOT, "testdata/conformance/cases.json"), "utf8"),
 ) as Case[];
