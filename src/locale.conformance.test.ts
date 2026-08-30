@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolve, type Localized } from "./locale";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(
   readFileSync(join(ROOT, "testdata/conformance/locale.json"), "utf8"),
 ) as { name: string; why: string; value: Localized; locale: string; want: string }[];

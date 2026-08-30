@@ -1,7 +1,8 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
- * Valida cada theme.json contra theme.schema.json y contra el contrato de tokens.
- * Se ejecuta en CI: un theme pack invalido no llega ni al CLI ni al plugin.
+ * Validates every theme.json against theme.schema.json and against the token
+ * contract. Runs in CI: an invalid theme pack reaches neither the CLI nor the
+ * plugin.
  */
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -26,8 +27,8 @@ for (const nombre of dirs) {
   const fj = join(d, "theme.json");
   const fc = join(d, "theme.css");
 
-  if (!existsSync(fj)) { errores.push(`${nombre}: falta theme.json`); continue; }
-  if (!existsSync(fc)) errores.push(`${nombre}: falta theme.css`);
+  if (!existsSync(fj)) { errores.push(`${nombre}: missing theme.json`); continue; }
+  if (!existsSync(fc)) errores.push(`${nombre}: missing theme.css`);
 
   const t = leer(fj);
 
@@ -37,35 +38,35 @@ for (const nombre of dirs) {
     }
   }
 
-  if (t.id !== nombre) errores.push(`${nombre}: id "${t.id}" no coincide con la carpeta`);
+  if (t.id !== nombre) errores.push(`${nombre}: id "${t.id}" does not match the folder name`);
 
   const propios = new Set(Object.keys(t.tokenSchema ?? {}));
   const huerfanos = Object.keys(t.tokens ?? {})
     .filter((k) => !declarados.has(k) && !propios.has(k));
   if (huerfanos.length) {
-    errores.push(`${nombre}: tokens sin declarar en tokenSchema: ${huerfanos.join(", ")}`);
+    errores.push(`${nombre}: tokens not declared in tokenSchema: ${huerfanos.join(", ")}`);
   }
 
-  // Un varSchema que declara una var inexistente es un formulario que edita
-  // algo que el pie nunca va a leer.
+  // A varSchema declaring a var that does not exist is a form editing something
+  // the footer will never read.
   const declaradas = Object.keys(t.varSchema ?? {});
   const existentes = new Set(Object.keys(t.vars ?? {}));
   const fantasma = declaradas.filter((k) => !existentes.has(k));
   if (fantasma.length) {
-    errores.push(`${nombre}: varSchema declara vars que no existen: ${fantasma.join(", ")}`);
+    errores.push(`${nombre}: varSchema declares vars that do not exist: ${fantasma.join(", ")}`);
   }
 
   const padre = "extends" in t ? t.extends : "_base";
   if (padre !== null && !existsSync(join(T, padre))) {
-    errores.push(`${nombre}: extends "${padre}" no existe`);
+    errores.push(`${nombre}: extends "${padre}" does not exist`);
   }
 
-  // La geometria de pagina y la paleta viven SOLO en theme.json.
+  // Page geometry and the palette live ONLY in theme.json.
   if (existsSync(fc)) {
     for (const [i, linea] of readFileSync(fc, "utf8").split("\n").entries()) {
       const s = linea.trim();
       if (s.startsWith("@page") || s.startsWith(":root")) {
-        errores.push(`${nombre}: theme.css:${i + 1} declara "${s.slice(0, 24)}" — eso va en theme.json`);
+        errores.push(`${nombre}: theme.css:${i + 1} declara "${s.slice(0, 24)}" — that belongs in theme.json`);
       }
     }
   }
@@ -73,7 +74,7 @@ for (const nombre of dirs) {
 
 if (errores.length) {
   console.error(errores.map((e) => `  ✗ ${e}`).join("\n"));
-  console.error(`\n${errores.length} error(es)`);
+  console.error(`\n${errores.length} error(s)`);
   process.exit(1);
 }
-console.log(`✓ ${dirs.length} theme packs validos (esquema + contrato de tokens)`);
+console.log(`✓ ${dirs.length} theme packs valid (schema + token contract)`);

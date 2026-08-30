@@ -27,7 +27,7 @@ const ctx = await esbuild.context({
   // At the repo ROOT: the community store requires manifest.json and the
   // release assets at the root, with no support for monorepos. The code stays
   // in plugin/src/ and only the build artifacts go up.
-  outfile: "../main.js",
+  outfile: "main.js",
 });
 
 if (production) {

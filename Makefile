@@ -24,10 +24,10 @@ validate:
 
 test: sync-themes
 	@cd cli && go test ./...
-	@cd plugin && bun test
+	@bun test src
 
 plugin: validate sync-themes
-	@cd plugin && bun run build
+	@npm run build --silent
 	@echo "plugin -> main.js"
 
 # Instala el plugin en un vault. VAULT se puede pasar por linea de comandos:
@@ -40,4 +40,4 @@ install: plugin
 	@echo "instalado -> $(VAULT)/.obsidian/plugins/pressmark"
 
 clean:
-	@rm -rf dist $(THEMES_DST) main.js plugin/src/themes.generated.ts
+	@rm -rf dist $(THEMES_DST) main.js src/themes.generated.ts

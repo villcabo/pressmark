@@ -18,9 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v6
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
       # The tag MUST match manifest.json: the store requires it, and a
       # mismatched release is rejected without saying why.
@@ -34,17 +35,13 @@ jobs:
           fi
 
       - name: Install deps
-        run: |
-          bun install --frozen-lockfile
-          cd plugin && bun install --frozen-lockfile
+        run: npm ci
 
       - name: Validate theme packs
-        run: bun tools/validate.mjs
+        run: npm run validate
 
       - name: Build plugin
-        run: |
-          make sync-themes
-          cd plugin && bun run build
+        run: npm run build
 
       # Proves the assets were built by this workflow from this repository.
       - name: Attest build provenance

@@ -12,7 +12,7 @@ export default [
       "main.js",
       "dist/**",
       "cli/**",
-      "plugin/src/themes.generated.ts",
+      "src/themes.generated.ts",
       "tools/**",
       "eslint.config.mjs",
     ],
