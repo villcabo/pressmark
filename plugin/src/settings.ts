@@ -77,7 +77,7 @@ export class SettingsTab extends PluginSettingTab {
       .setDesc(t("set.outputFolderDesc"))
       .addText((c) =>
         c
-          .setPlaceholder("exportados/")
+          .setPlaceholder(t("set.outputFolderPlaceholder"))
           .setValue(this.plugin.settings.outputFolder)
           .onChange(async (v) => {
             this.plugin.settings.outputFolder = v.trim();

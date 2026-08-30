@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { toInches, bytesOf, paperSize } from "./pdf";
+import { toInches, bytesOf, paperSize } from "./paper";
 
 describe("bytesOf", () => {
   test("trims a view with an offset inside a larger pool", () => {

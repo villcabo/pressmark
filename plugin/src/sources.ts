@@ -12,7 +12,17 @@ import { normalizePath } from "obsidian";
 import type { ThemeFS } from "./theme";
 import { EMBEDDED } from "./themes.generated";
 
-export const USER_THEMES_FOLDER = ".obsidian/pressmark/themes";
+/**
+ * Where a user's own packs live, relative to the vault's config folder.
+ *
+ * The config folder is NOT always ".obsidian" — the user can rename it — so it
+ * has to come from Vault.configDir rather than be spelled out.
+ */
+export const USER_THEMES_SUBFOLDER = "pressmark/themes";
+
+export function userThemesFolder(vault: Vault): string {
+  return `${vault.configDir}/${USER_THEMES_SUBFOLDER}`;
+}
 
 /** The packs that ship inside the plugin. */
 export function embeddedFS(): ThemeFS {
@@ -24,10 +34,11 @@ export function embeddedFS(): ThemeFS {
 }
 
 /** The user's own packs, inside the vault. */
-export function vaultFS(vault: Vault, folder = USER_THEMES_FOLDER): ThemeFS {
+export function vaultFS(vault: Vault, folder = ""): ThemeFS {
+  const base = folder || userThemesFolder(vault);
   return {
     read: async (path) => {
-      const p = normalizePath(`${folder}/${path}`);
+      const p = normalizePath(`${base}/${path}`);
       try {
         if (!(await vault.adapter.exists(p))) return null;
         return await vault.adapter.read(p);
@@ -36,7 +47,7 @@ export function vaultFS(vault: Vault, folder = USER_THEMES_FOLDER): ThemeFS {
       }
     },
     list: async () => {
-      const p = normalizePath(folder);
+      const p = normalizePath(base);
       try {
         if (!(await vault.adapter.exists(p))) return [];
         return (await vault.adapter.list(p)).folders.map((f) =>

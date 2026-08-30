@@ -14,7 +14,7 @@ import {
   normalizePath,
 } from "obsidian";
 import { load, type Resolved, type ThemeFS } from "./theme";
-import { embeddedFS, overlay, vaultFS, USER_THEMES_FOLDER } from "./sources";
+import { embeddedFS, overlay, vaultFS, USER_THEMES_SUBFOLDER } from "./sources";
 import {
   bandHTML,
   documentHTML,
@@ -93,8 +93,10 @@ export default class PressmarkPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const stored = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    this.settings = migrateSettings(stored);
+    // loadData() is typed `any`: whatever is on disk was written by an older
+    // version, so it gets narrowed here and repaired by migrateSettings.
+    const stored = (await this.loadData()) as Partial<Settings> | null;
+    this.settings = migrateSettings({ ...DEFAULT_SETTINGS, ...(stored ?? {}) });
   }
 
   async saveSettings(): Promise<void> {
@@ -234,14 +236,14 @@ export default class PressmarkPlugin extends Plugin {
         bandHTML(theme.footer, m, vars, title, language()),
       );
 
-      const pdf = await generate(html, opts);
+      const pdf = await generate(html, opts, this.app.vault);
       const destination = this.outputPath(file, o.folder);
       await this.app.vault.adapter.writeBinary(destination, bytesOf(pdf));
 
       notice.hide();
       new Notice(`✓ ${destination}`);
       if (o.open) {
-        this.app.workspace.openLinkText(destination, "", false);
+        void this.app.workspace.openLinkText(destination, "", false);
       }
     } catch (e) {
       notice.hide();
@@ -259,4 +261,4 @@ export default class PressmarkPlugin extends Plugin {
   }
 }
 
-export { USER_THEMES_FOLDER };
+export { USER_THEMES_SUBFOLDER };

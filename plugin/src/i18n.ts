@@ -9,7 +9,8 @@
  * not having them: they end up wrong and nobody notices. Adding one means
  * adding an entry here; missing keys fall through to English on their own.
  */
-import { obsidianLanguage, resolve } from "./locale";
+import { getLanguage } from "obsidian";
+import { resolve } from "./locale";
 
 const EN = {
   "modal.title": "Pressmark · Export to PDF",
@@ -50,6 +51,7 @@ const EN = {
   "set.openWhenDone": "Open the PDF when finished",
   "set.outputFolder": "Output folder",
   "set.outputFolderDesc": "Empty = next to the note.",
+  "set.outputFolderPlaceholder": "Exports/",
   "set.texts": "Texts",
   "set.textsDesc":
     'Text that the format prints, like the footer notice. A note can override it from its frontmatter with {{fm.<field>}}.',
@@ -115,6 +117,7 @@ const ES: Partial<Record<Key, string>> = {
   "set.openWhenDone": "Abrir el PDF al terminar",
   "set.outputFolder": "Carpeta de salida",
   "set.outputFolderDesc": "Vacío = junto a la nota.",
+  "set.outputFolderPlaceholder": "Exportados/",
   "set.texts": "Textos",
   "set.textsDesc":
     'Textos que el formato imprime, como el aviso del pie. Una nota puede pisarlos desde su frontmatter con {{fm.<campo>}}.',
@@ -146,7 +149,10 @@ let locale = "en";
 
 /** Called once when the plugin loads. */
 export function initLanguage(): string {
-  locale = obsidianLanguage();
+  // getLanguage() is official API as of 1.8.7, which the manifest requires.
+  // Reading the app's own private storage would work too, but it reaches into
+  // internals for something the API already exposes.
+  locale = getLanguage() || "en";
   // Reuses the same fallback chain as the theme packs, so the UI and the
   // document never end up in different languages.
   const available: Record<string, string> = {};

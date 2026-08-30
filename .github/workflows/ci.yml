@@ -20,10 +20,10 @@ jobs:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
 
-      - name: Install tooling deps
-        run: |
-          bun install --frozen-lockfile
-          cd plugin && bun install --frozen-lockfile
+      # One workspace, one lockfile: --frozen-lockfile is what catches a
+      # lockfile someone forgot to commit.
+      - name: Install
+        run: bun install --frozen-lockfile
 
       # Un theme pack invalido no debe llegar ni al CLI ni al plugin.
       - name: Validate theme packs
@@ -46,6 +46,10 @@ jobs:
       - name: TypeScript typecheck
         run: cd plugin && bunx tsc --noEmit
 
+      # The same rules the Obsidian community directory runs on submission.
+      - name: Lint (Obsidian plugin rules)
+        run: bunx eslint plugin/src --max-warnings 5
+
       # Los fixtures de testdata/conformance/ corren en los DOS lados: si Go y
       # TypeScript divergen, esto falla.
       - name: TypeScript tests
@@ -55,7 +59,7 @@ jobs:
         run: cd cli && go build ./...
 
       - name: Build plugin
-        run: cd plugin && bun run build
+        run: bun run build
 
       - name: The built artifacts must exist at the repo root
         run: test -f main.js && test -f manifest.json && test -f styles.css

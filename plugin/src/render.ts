@@ -21,11 +21,15 @@ export * from "./document";
  * longer matches. Unwrapping them IS the contract, not tidiness.
  */
 function flatten(root: HTMLElement): void {
+  const HTMLEl = root.doc.defaultView?.HTMLElement ?? HTMLElement;
   let changed = true;
   while (changed) {
     changed = false;
     for (const child of Array.from(root.children)) {
-      if (child instanceof HTMLElement && /(^|\s)el-\S+/.test(child.className)) {
+      // The constructor from THIS element's window, not the bare global: an
+      // element rendered in a popout window belongs to that window's class,
+      // and a plain instanceof would silently say no.
+      if (child.instanceOf(HTMLEl) && /(^|\s)el-\S+/.test(child.className)) {
         child.replaceWith(...Array.from(child.childNodes));
         changed = true;
       }
@@ -80,8 +84,7 @@ export async function renderBody(
   sourcePath: string,
   component: Component,
 ): Promise<string> {
-  const el = document.createElement("div");
-  el.addClass(WRAPPER);
+  const el = createDiv({ cls: WRAPPER });
   await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
   stripUI(el);
   flatten(el);

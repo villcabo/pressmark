@@ -41,6 +41,7 @@ h1, h2, h3, h4, h5, h6 {
   break-after: avoid;
   page-break-after: avoid;
   break-inside: avoid;
+  page-break-inside: avoid;
   letter-spacing: -0.15pt;
 }
 
@@ -89,6 +90,7 @@ blockquote {
   background: var(--notice-bg);
   color: #5c3d0c;
   break-inside: avoid;
+  page-break-inside: avoid;
 }
 blockquote p:last-child { margin-bottom: 0; }
 
@@ -123,6 +125,7 @@ pre {
   word-break: break-word;
   line-height: 1.45;
   break-inside: avoid;
+  page-break-inside: avoid;
   color: var(--ink);
 }
 pre code {
@@ -138,6 +141,7 @@ table {
   margin: 1.1em 0;
   font-size: 0.89em;
   break-inside: auto;
+  page-break-inside: auto;
 }
 
 thead { display: table-header-group; }   /* repeats the header on every page */
@@ -173,7 +177,7 @@ table code { font-size: 0.88em; white-space: normal; }
 
 /* ── Images ──────────────────────────────────────────────────────────── */
 
-img { max-width: 100%; height: auto; break-inside: avoid; }
+img { max-width: 100%; height: auto; break-inside: avoid; page-break-inside: avoid; }
 
 /* ── Mermaid diagrams ─────────────────────────────────────────────────────
    The renderer emits <pre class="mermaid"> and mermaid.js replaces its content
@@ -192,6 +196,7 @@ pre.mermaid {
   border: none;
   text-align: center;
   break-inside: avoid;
+  page-break-inside: avoid;
 }
 
 pre.mermaid svg {

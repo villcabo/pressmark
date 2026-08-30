@@ -45,27 +45,3 @@ export function resolve(v: Localized | undefined, locale: string): string {
   }
   return v[keys[0]!]!;
 }
-
-/**
- * Obsidian's language.
- *
- * getLanguage() has been official API since 1.8.7 and the manifest declares
- * 1.4.0, so it can't be called blindly: it doesn't exist on an old version.
- * Falls back to localStorage, which is where the app itself reads it from.
- */
-export function obsidianLanguage(): string {
-  try {
-    const mod = require("obsidian") as { getLanguage?: () => string };
-    if (typeof mod.getLanguage === "function") {
-      const l = mod.getLanguage();
-      if (l) return l;
-    }
-  } catch {
-    /* fall back below */
-  }
-  try {
-    return window.localStorage.getItem("language") || "en";
-  } catch {
-    return "en";
-  }
-}

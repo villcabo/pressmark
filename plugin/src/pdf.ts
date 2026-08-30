@@ -9,96 +9,10 @@
  * Requires isDesktopOnly: true in the manifest. The store's policy allows it
  * with that flag declared, and there are published plugins that do the same.
  */
-import { writeFile, unlink, mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import type { Page, Resolved } from "./theme";
+import { FileSystemAdapter, normalizePath, type Vault } from "obsidian";
+import type { PrintOptions } from "./paper";
 
-export interface PrintOptions {
-  landscape: boolean;
-  printBackground: boolean;
-  scale?: number;
-  paperWidth: number; // inches
-  paperHeight: number;
-  margins: { top: number; bottom: number; left: number; right: number };
-  displayHeaderFooter: boolean;
-  headerTemplate: string;
-  footerTemplate: string;
-}
-
-const PER_INCH: Record<string, number> = {
-  mm: 25.4,
-  cm: 2.54,
-  in: 1,
-  pt: 72,
-  px: 96,
-};
-
-/**
- * printToPDF only understands inches.
- *
- * Validates the number with a regular expression and NOT with parseFloat:
- * parseFloat stops at the first character it doesn't understand, so
- * "18 inches" gives it 18 and swallows an invalid value. Go's converter
- * rejects it, and the two have to agree or the same theme pack gives
- * different margins on each side.
- */
-const NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
-
-export function toInches(v: string | undefined, fallback = 0): number {
-  if (!v) return fallback;
-  const s = v.trim().toLowerCase();
-  const num = (txt: string, per: number): number => {
-    const t = txt.trim();
-    if (!NUMBER_RE.test(t)) throw new Error(`invalid length: "${v}"`);
-    return Number.parseFloat(t) / per;
-  };
-  for (const [u, per] of Object.entries(PER_INCH)) {
-    if (s.endsWith(u)) return num(s.slice(0, -u.length), per);
-  }
-  return num(s, 96); // bare number = px
-}
-
-const PAPERS: Record<string, [number, number]> = {
-  a3: [11.69, 16.54],
-  a4: [8.27, 11.69],
-  a5: [5.83, 8.27],
-  letter: [8.5, 11],
-  legal: [8.5, 14],
-  tabloid: [11, 17],
-};
-
-export function paperSize(page: Page | undefined): [number, number] {
-  const s = page?.size;
-  if (s && typeof s === "object") {
-    return [toInches(s.width), toInches(s.height)];
-  }
-  const name = (typeof s === "string" ? s : "A4").toLowerCase();
-  const d = PAPERS[name];
-  if (!d) throw new Error(`unknown paper size: "${s}"`);
-  return d;
-}
-
-export function printOptionsFor(t: Resolved, header: string, footer: string): PrintOptions {
-  const [w, h] = paperSize(t.page);
-  const m = t.page?.margin;
-  return {
-    landscape: t.page?.orientation === "landscape",
-    printBackground: t.page?.printBackground ?? true,
-    scale: t.page?.scale,
-    paperWidth: w,
-    paperHeight: h,
-    margins: {
-      top: toInches(m?.top),
-      bottom: toInches(m?.bottom),
-      left: toInches(m?.left),
-      right: toInches(m?.right),
-    },
-    displayHeaderFooter: Boolean(t.header?.enabled || t.footer?.enabled),
-    headerTemplate: header,
-    footerTemplate: footer,
-  };
-}
+export * from "./paper";
 
 /**
  * Prints the HTML to PDF.
@@ -107,26 +21,40 @@ export function printOptionsFor(t: Resolved, header: string, footer: string): Pr
  * being passed as a data: URL. That's not a whim: a data: URL has a size
  * limit and a document with embedded images blows past it with no effort.
  */
-/**
- * Copies the REAL bytes of the result.
- *
- * printToPDF returns a Node Buffer, and `buffer.buffer` doesn't return its
- * own bytes: it returns the entire pool it was carved from, which is usually
- * much bigger. Writing that out produces a corrupt PDF. Has to be sliced by
- * byteOffset/byteLength.
- */
-export function bytesOf(b: Uint8Array): ArrayBuffer {
-  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
-}
 
-export async function generate(html: string, opts: PrintOptions): Promise<Uint8Array> {
+/**
+ * Prints the HTML to PDF.
+ *
+ * The document is written to a temporary file and loaded with loadFile rather
+ * than passed as a data: URL. That is not fussiness: a data: URL has a size
+ * limit and a document with embedded images sails past it.
+ *
+ * The temp file is written through the Vault API into the plugin's own config
+ * folder, NOT through Node's fs into the OS temp directory. Both work, but the
+ * fs route means the plugin can read and write anywhere on the machine, and no
+ * user should have to take that on trust for something this small.
+ */
+export async function generate(
+  html: string,
+  opts: PrintOptions,
+  vault: Vault,
+): Promise<Uint8Array> {
   // Dynamic require: electron doesn't exist on mobile, and the bundler must
   // not resolve it at build time.
   const remote = requireRemote();
 
-  const dir = await mkdtemp(join(tmpdir(), "pressmark-"));
-  const file = join(dir, "doc.html");
-  await writeFile(file, html, "utf8");
+  const adapter = vault.adapter;
+  if (!(adapter instanceof FileSystemAdapter)) {
+    throw new Error("Pressmark needs a local vault to render the document");
+  }
+
+  const dir = normalizePath(`${vault.configDir}/pressmark`);
+  if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
+
+  // A unique name so two exports at once cannot clobber each other.
+  const rel = normalizePath(`${dir}/render-${Date.now()}.html`);
+  await adapter.write(rel, html);
+  const file = adapter.getFullPath(rel);
 
   const win = new remote.BrowserWindow({
     show: false,
@@ -155,7 +83,7 @@ export async function generate(html: string, opts: PrintOptions): Promise<Uint8A
     });
   } finally {
     win.destroy();
-    await unlink(file).catch(() => {});
+    await adapter.remove(rel).catch(() => {});
   }
 }
 
@@ -180,7 +108,10 @@ interface Remote {
  * undiagnosable.
  */
 function requireRemote(): Remote {
-  const req = (globalThis as { require?: (m: string) => unknown }).require;
+  // activeWindow, not globalThis: in a popout window the Node bridge lives on
+  // that window, and globalThis would reach the wrong one.
+  const win = typeof activeWindow !== "undefined" ? activeWindow : window;
+  const req = (win as unknown as { require?: (m: string) => unknown }).require;
   if (!req) {
     throw new Error(
       "no access to require(): the plugin needs the desktop app (isDesktopOnly)",

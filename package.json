@@ -1,11 +1,19 @@
 {
-  "name": "pressmark-tools",
+  "name": "pressmark",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
+  "workspaces": ["plugin"],
   "scripts": {
-    "validate": "bun tools/validate.mjs"
+    "build": "bun tools/validate.mjs && bun tools/gen-plugin-themes.mjs && cd plugin && bun run build",
+    "validate": "bun tools/validate.mjs",
+    "test": "cd plugin && bun test"
   },
   "devDependencies": {
-    "ajv": "^8.17.1"
+    "@eslint/js": "^10.0.1",
+    "ajv": "^8.17.1",
+    "eslint": "^10.9.1",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "typescript-eslint": "^8.68.0"
   }
 }

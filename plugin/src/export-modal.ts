@@ -10,9 +10,8 @@
 import { App, Modal, Notice, Setting, type TFile } from "obsidian";
 import type { Resolved, Page } from "./theme";
 import { documentHTML } from "./render";
-import { paperSize } from "./pdf";
-import { t, language } from "./i18n";
-import { resolve } from "./locale";
+import { paperSize } from "./paper";
+import { t } from "./i18n";
 
 export interface ExportOptions {
   theme: string;
