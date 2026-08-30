@@ -1,0 +1,9 @@
+{
+  "id": "md2topdf",
+  "name": "Markdown to PDF Themes",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Export notes to PDF using portable theme packs — the same packs the md2topdf CLI uses, so terminal and vault produce identical documents.",
+  "author": "Bismarck Villca",
+  "isDesktopOnly": true
+}

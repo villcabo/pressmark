@@ -3,7 +3,7 @@
 THEMES_SRC := themes
 THEMES_DST := cli/internal/themes/packs
 
-.PHONY: all sync-themes build validate test clean
+.PHONY: all sync-themes build plugin validate test clean
 
 all: build
 
@@ -13,6 +13,7 @@ sync-themes:
 	@cp -R $(THEMES_SRC)/. $(THEMES_DST)/
 	@rm -f $(THEMES_DST)/theme.schema.json
 	@echo "themes sincronizados -> $(THEMES_DST)"
+	@bun tools/gen-plugin-themes.mjs
 
 build: validate sync-themes
 	@cd cli && go build -o ../dist/md2topdf ./cmd/md2topdf
@@ -23,6 +24,11 @@ validate:
 
 test: sync-themes
 	@cd cli && go test ./...
+	@cd plugin && bun test
+
+plugin: validate sync-themes
+	@cd plugin && bun run build
+	@echo "plugin -> plugin/main.js"
 
 clean:
-	@rm -rf dist $(THEMES_DST)
+	@rm -rf dist $(THEMES_DST) plugin/main.js plugin/src/themes.generated.ts

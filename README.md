@@ -7,9 +7,10 @@ El motor de maquetado es Chromium, en los dos casos. Lo que cambia es quién lo
 maneja. Lo que **no** cambia es el theme pack.
 
 ```
-themes/          el producto: CSS + tokens + geometria de pagina
-  ├─ cli/        binario Go: goldmark + chromedp + Chrome del sistema
-  └─ plugin/     plugin de Obsidian (desktop): renderer propio + printToPDF
+themes/                    el producto: CSS + tokens + geometria de pagina
+testdata/conformance/      la semantica de herencia, que corren los dos
+  ├─ cli/                  binario Go: goldmark + chromedp + Chrome del sistema
+  └─ plugin/               Obsidian (desktop): renderer propio + printToPDF
 ```
 
 ## Por que existe
@@ -74,14 +75,56 @@ cerrado de `md-to-pdf`, no de CDP. Manejando Chrome uno mismo no hay carrera.
 
 Los diagramas toman la paleta del theme, asi que no desentonan con el documento.
 
+## Plugin de Obsidian
+
+Desktop only. Obsidian ya *es* Chromium, asi que el plugin no depende del
+binario ni de nada externo: renderiza con el renderer propio de Obsidian —el
+unico que resuelve wikilinks, embeds, callouts y Dataview— y genera el PDF con
+`webContents.printToPDF` de Electron.
+
+```bash
+make plugin      # -> plugin/main.js
+```
+
+Para probarlo, copiar `manifest.json`, `main.js` y `styles.css` (si existe) a
+`<vault>/.obsidian/plugins/md2topdf/`.
+
+### Theme packs propios
+
+Van en `<vault>/.obsidian/md2topdf/themes/<id>/`. Se leen con la API Vault, no
+hace falta permiso de nada. Un pack propio puede heredar de uno embebido:
+`extends: "_base"` funciona aunque `_base` no este en el vault.
+
+### La UI de personalizacion se genera sola
+
+Los controles salen del `tokenSchema` del theme pack: `color` dibuja un color
+picker, `length` un campo con unidad, `font-stack` un texto. Agregar un token
+con su entrada de schema hace aparecer su control **sin tocar una linea de la
+UI**. Los overrides del usuario pisan tokens, nunca el CSS, asi que
+personalizar no rompe el pack y siempre se puede volver al original.
+
+## Como se garantiza que el PDF salga igual en los dos lados
+
+No compartiendo codigo — el CLI parsea con goldmark y el plugin usa el renderer
+de Obsidian, y tiene que ser asi. Se garantiza con tres cosas:
+
+1. **El theme pack**, que es literalmente el mismo archivo.
+2. **El contrato de estructura HTML**: los dos envuelven en
+   `<article class="m2p-doc">` y garantizan que los bloques de primer nivel
+   sean hijos DIRECTOS. El CSS de la portada depende de eso.
+3. **Los fixtures de conformidad** en `testdata/conformance/`: 13 casos que
+   definen la semantica de herencia y que corren **las dos** implementaciones.
+   Si divergen, la suite falla. Ver su
+   [README](testdata/conformance/README.md).
+
 ## Estado
 
 | Fase | Que | Estado |
 | ---- | --- | ------ |
 | 0 | Formato de theme pack + migracion de los 6 temas | hecho |
 | 1 | CLI en Go | hecho |
-| 2 | Plugin de Obsidian | pendiente |
-| 3 | UI de personalizacion + import/export de packs | pendiente |
+| 2 | Plugin de Obsidian: exportacion + UI de personalizacion | hecho |
+| 3 | Import/export de packs, watch, fuentes embebidas | pendiente |
 | 4 | Submission al community store | pendiente |
 
 Ver [`MIGRATION.md`](MIGRATION.md) para lo que cambio al migrar, incluido un bug
@@ -92,8 +135,9 @@ de margenes que arrastraban los 6 temas y la medicion que lo resolvio.
 ```bash
 bun install
 bun run validate     # valida los theme packs: esquema + contrato de tokens
-make build           # valida, sincroniza themes y compila
-make test            # tests de Go
+make build           # valida, sincroniza themes y compila el CLI
+make plugin          # compila el plugin de Obsidian
+make test            # tests de Go Y de TypeScript, incluida la conformidad
 ```
 
 ### Dependencias embebidas

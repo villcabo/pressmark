@@ -13,3 +13,4 @@
 # Entorno
 .env
 .DS_Store
+/plugin/src/themes.generated.ts
