@@ -55,6 +55,19 @@ func (s *Size) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON devuelve el mismo shape que entro: "A4" o {width,height}.
+// Sin esto un theme resuelto no vuelve a ser un theme.json valido, y el plugin
+// necesita justamente eso para guardar las personalizaciones del usuario.
+func (s Size) MarshalJSON() ([]byte, error) {
+	if s.Name != "" {
+		return json.Marshal(s.Name)
+	}
+	return json.Marshal(struct {
+		Width  string `json:"width"`
+		Height string `json:"height"`
+	}{s.Width, s.Height})
+}
+
 type Margin struct {
 	Top    *string `json:"top,omitempty"`
 	Right  *string `json:"right,omitempty"`
