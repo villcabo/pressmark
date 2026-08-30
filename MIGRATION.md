@@ -26,10 +26,36 @@ Ninguna de las dos estaba mal. Servían a scripts distintos y se separaron sin
 que nada avisara. El patrón lo delata: el CSS tiene exactamente 1mm más en los
 laterales en 5 de 6 temas.
 
-**Decisión:** el valor del `.pdf.json` es el que se conserva, porque es el que
-produjo los PDF que venís usando. El `@page` desaparece del CSS y `page.margin`
-de `theme.json` queda como fuente única. `tools/validate.mjs` rechaza cualquier
-`theme.css` que vuelva a declarar `@page`.
+### Cuál de los dos ganaba: medido, no supuesto
+
+Se imprimió el mismo documento tres veces con `md-to-pdf`, variando solo el CSS,
+y se midió la posición real del texto con `pdftotext -bbox` (A4, tema `informe`):
+
+| `@page` en CSS | margen de `printToPDF` | x del cuerpo | Gana |
+| -------------- | ---------------------- | ------------ | ---- |
+| `19mm` | `18mm` | 54.0 pt = 19mm | CSS |
+| `40mm` | `18mm` | 114.0 pt = 40mm | CSS |
+| *ausente* | `18mm` | 51.0 pt = 18mm | `printToPDF` |
+
+**Conclusión:** con `@page` presente, Chrome lo aplica al cuerpo e **ignora** el
+margen de `printToPDF`. Sin `@page`, aplica el de `printToPDF`.
+
+Esto tiene dos consecuencias.
+
+**1. `page.margin` lleva los valores del `@page`, no los del `.pdf.json`.** Son
+los que realmente produjeron tus documentos. La primera versión de esta migración
+se quedó con los del JSON — estaba mal, y la medición lo corrigió.
+
+**2. El pie estuvo desalineado del cuerpo todo este tiempo.** En `informe` el
+cuerpo arranca en 19mm (del `@page`) y el pie en 18mm (del `padding: 0 18mm`
+incrustado en el `footerTemplate`). Un milímetro de diferencia, en los 6 temas.
+En el formato nuevo el renderer inyecta el mismo margen en los dos, así que el
+pie se corre 1mm y por fin alinea.
+
+**El diseño nuevo queda validado por la tercera fila:** sin `@page` en el CSS
+—que es exactamente lo que `tools/validate.mjs` obliga— el margen de
+`printToPDF` gobierna el cuerpo de forma limpia y sin ambigüedad. Una sola
+fuente de verdad, y funciona.
 
 ## 2. El pie de página tenía el texto y el margen incrustados
 

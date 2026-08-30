@@ -8,10 +8,10 @@
   "page": {
     "size": "A4",
     "margin": {
-      "top": "16mm",
-      "right": "15mm",
+      "top": "18mm",
+      "right": "17mm",
       "bottom": "16mm",
-      "left": "15mm"
+      "left": "17mm"
     },
     "printBackground": true
   },

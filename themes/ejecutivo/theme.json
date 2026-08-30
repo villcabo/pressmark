@@ -20,9 +20,9 @@
     "size": "A4",
     "margin": {
       "top": "26mm",
-      "right": "22mm",
+      "right": "23mm",
       "bottom": "20mm",
-      "left": "22mm"
+      "left": "23mm"
     },
     "printBackground": true
   },

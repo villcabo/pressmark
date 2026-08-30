@@ -9,8 +9,9 @@ Transformaciones, todas deterministas:
   5. '#title-block-header'       ->  eliminado   (fuga de pandoc)
 
 Cuando @page y .pdf.json declaran margenes distintos -- que es SIEMPRE --
-se reporta la discrepancia y se conserva el valor del .pdf.json, que es el
-que viaja a printToPDF. El otro queda registrado en MIGRATION.md.
+se conserva el valor del @page del CSS. NO es una preferencia estetica: esta
+medido. Con @page presente Chrome lo aplica al cuerpo e ignora el margen de
+printToPDF; sin @page, aplica el de printToPDF. Ver MIGRATION.md seccion 1.
 """
 import json, re, sys, pathlib
 
@@ -81,9 +82,9 @@ def migrar(nombre, css_src, json_src, destino, meta):
     if m_css and m_json and m_css != m_json:
         reporte.append({
             "tema": nombre, "css": m_css, "pdf_json": m_json,
-            "elegido": "pdf_json",
+            "elegido": "css_@page",
         })
-    margin = m_json or m_css or {}
+    margin = m_css or m_json or {}   # el @page gana: esta medido
 
     page = {"size": page_css.get("size", "A4"), "margin": margin,
             "printBackground": bool(pdfopts.get("printBackground", True))}
