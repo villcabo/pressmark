@@ -1,0 +1,171 @@
+[
+  {
+    "name": "hereda-tokens-de-base",
+    "why": "Un theme que no declara extends hereda de _base. Los tokens del padre llegan al hijo.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "Base", "version": "1.0.0", "extends": null,
+                           "tokens": { "acento": "#111111", "tinta": "#222222" } },
+                 "css": "a { color: var(--acento); }" },
+      "hijo":  { "json": { "id": "hijo", "name": "Hijo", "version": "1.0.0" },
+                 "css": "b { color: red; }" }
+    },
+    "load": "hijo",
+    "expect": {
+      "chain": ["_base", "hijo"],
+      "tokens": { "acento": "#111111", "tinta": "#222222" },
+      "css": "a { color: var(--acento); } b { color: red; }"
+    }
+  },
+  {
+    "name": "el-hijo-pisa-token-por-token",
+    "why": "El merge de tokens es clave a clave, no reemplazo del objeto entero.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "Base", "version": "1.0.0", "extends": null,
+                           "tokens": { "acento": "#111111", "tinta": "#222222", "regla": "#333333" } },
+                 "css": "" },
+      "hijo":  { "json": { "id": "hijo", "name": "Hijo", "version": "1.0.0",
+                           "tokens": { "acento": "#ff0000" } },
+                 "css": "" }
+    },
+    "load": "hijo",
+    "expect": { "tokens": { "acento": "#ff0000", "tinta": "#222222", "regla": "#333333" } }
+  },
+  {
+    "name": "extends-null-no-hereda-nada",
+    "why": "extends null corta la cadena. No es lo mismo que omitir extends.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "Base", "version": "1.0.0", "extends": null,
+                           "tokens": { "acento": "#111111" } },
+                 "css": "a{}" },
+      "suelto": { "json": { "id": "suelto", "name": "Suelto", "version": "1.0.0", "extends": null,
+                            "tokens": { "propio": "#999999" } },
+                  "css": "b{}" }
+    },
+    "load": "suelto",
+    "expect": { "chain": ["suelto"], "tokens": { "propio": "#999999" }, "css": "b{}" }
+  },
+  {
+    "name": "cadena-de-tres",
+    "why": "La herencia sigue toda la cadena, y el CSS se apila del ancestro mas lejano al propio.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "tokens": { "a": "1", "b": "1", "c": "1" } }, "css": "/*1*/" },
+      "medio": { "json": { "id": "medio", "name": "M", "version": "1.0.0", "extends": "_base",
+                           "tokens": { "b": "2", "c": "2" } }, "css": "/*2*/" },
+      "hoja":  { "json": { "id": "hoja", "name": "H", "version": "1.0.0", "extends": "medio",
+                           "tokens": { "c": "3" } }, "css": "/*3*/" }
+    },
+    "load": "hoja",
+    "expect": {
+      "chain": ["_base", "medio", "hoja"],
+      "tokens": { "a": "1", "b": "2", "c": "3" },
+      "css": "/*1*/ /*2*/ /*3*/"
+    }
+  },
+  {
+    "name": "margen-parcial",
+    "why": "page.margin se mezcla lado a lado. Declarar solo left no borra los otros tres.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "page": { "size": "A4", "printBackground": true,
+                                     "margin": { "top": "20mm", "right": "18mm", "bottom": "18mm", "left": "18mm" } } },
+                 "css": "" },
+      "hijo": { "json": { "id": "hijo", "name": "H", "version": "1.0.0",
+                          "page": { "margin": { "left": "30mm" } } }, "css": "" }
+    },
+    "load": "hijo",
+    "expect": {
+      "page": { "size": "A4", "printBackground": true,
+                "margin": { "top": "20mm", "right": "18mm", "bottom": "18mm", "left": "30mm" } }
+    }
+  },
+  {
+    "name": "banda-parcial",
+    "why": "El footer se mezcla campo a campo: cambiar solo el texto de la izquierda conserva el resto.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "footer": { "enabled": true, "left": "viejo", "right": "{{page}}",
+                                       "rule": true, "fontSize": "7pt", "color": "#888888" } },
+                 "css": "" },
+      "hijo": { "json": { "id": "hijo", "name": "H", "version": "1.0.0",
+                          "footer": { "left": "nuevo" } }, "css": "" }
+    },
+    "load": "hijo",
+    "expect": {
+      "footer": { "enabled": true, "left": "nuevo", "right": "{{page}}",
+                  "rule": true, "fontSize": "7pt", "color": "#888888" }
+    }
+  },
+  {
+    "name": "false-explicito-pisa-true",
+    "why": "Un booleano en false NO es lo mismo que ausente. cover.enabled:false tiene que ganarle a true.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "cover": { "enabled": true, "break": "page" } }, "css": "" },
+      "hijo": { "json": { "id": "hijo", "name": "H", "version": "1.0.0",
+                          "cover": { "enabled": false } }, "css": "" }
+    },
+    "load": "hijo",
+    "expect": { "cover": { "enabled": false, "break": "page" } }
+  },
+  {
+    "name": "vars-se-mezclan",
+    "why": "vars se mezcla clave a clave igual que tokens.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "vars": { "aviso": "interno", "pie": "x" } }, "css": "" },
+      "hijo": { "json": { "id": "hijo", "name": "H", "version": "1.0.0",
+                          "vars": { "aviso": "publico" } }, "css": "" }
+    },
+    "load": "hijo",
+    "expect": { "vars": { "aviso": "publico", "pie": "x" } }
+  },
+  {
+    "name": "identidad-es-la-del-pedido",
+    "why": "id, name y description salen del theme pedido, no del ancestro del que hereda.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "Base", "description": "la base", "version": "9.9.9", "extends": null }, "css": "" },
+      "hijo": { "json": { "id": "hijo", "name": "Hijo", "description": "el hijo", "version": "1.0.0" }, "css": "" }
+    },
+    "load": "hijo",
+    "expect": { "id": "hijo", "name": "Hijo", "description": "el hijo", "version": "1.0.0" }
+  },
+  {
+    "name": "token-numerico-se-vuelve-texto",
+    "why": "El esquema admite numeros en tokens; al emitirse como variable CSS todo es texto.",
+    "packs": {
+      "_base": { "json": { "id": "_base", "name": "B", "version": "1.0.0", "extends": null,
+                           "tokens": { "escala": 1.5, "peso": 700 } }, "css": "" }
+    },
+    "load": "_base",
+    "expect": { "tokens": { "escala": "1.5", "peso": "700" } }
+  },
+  {
+    "name": "herencia-circular-falla",
+    "why": "Un ciclo tiene que dar error claro, no colgar el proceso.",
+    "packs": {
+      "a": { "json": { "id": "a", "name": "A", "version": "1.0.0", "extends": "b" }, "css": "" },
+      "b": { "json": { "id": "b", "name": "B", "version": "1.0.0", "extends": "a" }, "css": "" }
+    },
+    "load": "a",
+    "expectError": "circular"
+  },
+  {
+    "name": "padre-inexistente-falla",
+    "why": "Heredar de un theme que no existe tiene que fallar, no resolver a medias.",
+    "packs": {
+      "hijo": { "json": { "id": "hijo", "name": "H", "version": "1.0.0", "extends": "fantasma" }, "css": "" }
+    },
+    "load": "hijo",
+    "expectError": "fantasma"
+  },
+  {
+    "name": "id-que-no-coincide-falla",
+    "why": "El id declarado tiene que coincidir con la carpeta, o la resolucion de extends miente.",
+    "packs": {
+      "carpeta": { "json": { "id": "otro", "name": "X", "version": "1.0.0", "extends": null }, "css": "" }
+    },
+    "load": "carpeta",
+    "expectError": "otro"
+  }
+]
