@@ -36,6 +36,27 @@ describe("i18n", () => {
   });
 });
 
+describe("every key is used", () => {
+  // A key nobody calls is dead weight: it hides a botched rename, and it costs
+  // whoever translates the plugin their time on a string no one will read.
+  test("no orphan keys", () => {
+    const en = keysOf("EN");
+    const sources = readdirSync(SRC)
+      .filter((n) => n.endsWith(".ts") && !n.includes("test") && n !== "i18n.ts")
+      .map((n) => readFileSync(join(SRC, n), "utf8"))
+      .join("\n");
+
+    // Some keys are composed at runtime — t(`group.${g}`) — so the literal
+    // never appears. Their prefix does, and that is what counts as a use.
+    const dynamicPrefixes = [...sources.matchAll(/`([a-z]+)\.\$\{/g)].map((m) => `${m[1]}.`);
+
+    const orphans = en.filter(
+      (k) => !sources.includes(`"${k}"`) && !dynamicPrefixes.some((p) => k.startsWith(p)),
+    );
+    expect(orphans, `defined but never used: ${orphans.join(", ")}`).toEqual([]);
+  });
+});
+
 describe("no hardcoded text left in the UI", () => {
   // Strings with an accent or ñ inside calls to Obsidian's API: if they
   // appear outside i18n.ts, someone wrote text without going through t().
