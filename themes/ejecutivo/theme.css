@@ -1,0 +1,62 @@
+/* ============================================================================
+   ejecutivo.css — para dirección y comité. Va encima de base.css.
+
+   Serif en los títulos, sans en el cuerpo. Azul de tinta, mucho aire. Sin
+   zebra en las tablas: en un documento que se lee, no se audita, las bandas
+   de color son ruido.
+   ========================================================================== */
+
+html { font-size: 11pt; }
+.m2p-doc { line-height: 1.68; }
+
+/* ── Portada ──────────────────────────────────────────────────────────── */
+
+.m2p-doc > h1:first-of-type {
+  margin-top: var(--portada-offset);
+  font-family: var(--fuente-titulo);
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.5pt;
+  color: var(--acento);
+}
+
+.m2p-doc > h1:first-of-type code {
+  background: none; padding: 0;
+  font-size: 0.74em; color: var(--acento); font-weight: 500;
+}
+
+.m2p-doc > h1:first-of-type + p {
+  margin-top: 12mm;
+  padding-top: 7mm;
+  border-top: 0.75pt solid var(--acento);
+  font-size: 0.93rem;
+  color: var(--tenue);
+  line-height: 2.1;
+}
+
+.m2p-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+
+/* ── Títulos en serif, con aire ──────────────────────────────────────── */
+
+h1, h2, h3 { font-family: var(--fuente-titulo); font-weight: 400; letter-spacing: 0; }
+
+h2 { font-size: 1.5rem; margin: 2.6em 0 0.7em; }
+h3 { font-size: 1.18rem; margin: 1.9em 0 0.4em; color: var(--tinta); }
+h4 { font-family: var(--fuente); font-size: 0.8rem; }
+
+/* ── Tablas: sin bandas, solo reglas ─────────────────────────────────── */
+
+table { font-size: 0.87em; margin: 1.5em 0; }
+th { font-family: var(--fuente); padding: 0.5em 0.7em 0.4em; }
+td { padding: 0.6em 0.7em; }
+tbody tr:nth-child(even) { background: none; }
+
+/* ── Citas: acompañan el texto, no lo interrumpen ────────────────────── */
+
+blockquote {
+  background: var(--acento-tenue);
+  border-left: 2pt solid var(--acento);
+  color: var(--tinta);
+  font-style: italic;
+}

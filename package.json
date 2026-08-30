@@ -1,0 +1,11 @@
+{
+  "name": "md2topdf-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "bun tools/validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1"
+  }
+}

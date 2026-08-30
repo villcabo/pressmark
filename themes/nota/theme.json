@@ -1,0 +1,22 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "nota",
+  "name": "Nota",
+  "description": "Sin portada, arranca directo. Compacto, para diagnosticos y listas.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "16mm",
+      "right": "15mm",
+      "bottom": "16mm",
+      "left": "15mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": false,
+    "break": "none"
+  }
+}

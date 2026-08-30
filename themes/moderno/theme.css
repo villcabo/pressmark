@@ -1,0 +1,62 @@
+/* ============================================================================
+   moderno.css — propuestas y documentos de producto. Va encima de base.css.
+
+   Inter Display en los títulos, ciruela como acento. Se eligió ciruela y no
+   otro azul para que no se confunda con ejecutivo ni con el verde de la base:
+   los seis temas tienen que distinguirse de un vistazo, no por el nombre.
+   ========================================================================== */
+
+html { font-size: 10.5pt; }
+.m2p-doc { line-height: 1.62; }
+
+/* ── Portada: el dato entra en una tarjeta ───────────────────────────── */
+
+.m2p-doc > h1:first-of-type {
+  margin-top: var(--portada-offset);
+  font-family: var(--fuente-titulo);
+  font-size: 2.65rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -1.2pt;
+  color: var(--acento);
+}
+
+.m2p-doc > h1:first-of-type code {
+  background: none; padding: 0;
+  font-size: 0.72em; color: var(--acento); font-weight: 600;
+}
+
+.m2p-doc > h1:first-of-type + p {
+  margin-top: 10mm;
+  padding: 5mm 6mm;
+  border: none;
+  border-radius: 5pt;
+  background: var(--acento-tenue);
+  font-size: 0.93rem;
+  color: var(--tinta);
+  line-height: 1.85;
+}
+
+.m2p-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+
+/* ── Títulos ─────────────────────────────────────────────────────────── */
+
+h1, h2, h3 { font-family: var(--fuente-titulo); letter-spacing: -0.4pt; }
+h2 { font-size: 1.4rem; font-weight: 700; margin: 2.3em 0 0.5em; }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.7em 0 0.35em; }
+h4 { text-transform: none; letter-spacing: 0; color: var(--acento); font-size: 0.86rem; }
+
+/* ── Tablas ───────────────────────────────────────────────────────────
+   Sin `overflow:hidden` ni `border-radius` en <table>: rompen el
+   table-header-group y el encabezado se repite VACÍO al partirse la tabla. */
+
+table { font-size: 0.87em; margin: 1.3em 0; }
+th { padding: 0.45em 0.75em 0.35em; }
+td { padding: 0.5em 0.75em; }
+
+/* ── Código: tarjeta suave ───────────────────────────────────────────── */
+
+pre { border-radius: 0 5pt 5pt 0; border-left-width: 3pt; border-left-color: var(--acento-medio); }
+:not(pre) > code { border-radius: 3pt; }
+
+blockquote { border-radius: 0 5pt 5pt 0; }

@@ -1,0 +1,122 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "_base",
+  "name": "Base",
+  "description": "Cimiento comun de todos los theme packs. No se usa suelto: define el contrato de tokens y los estilos que el resto hereda. Su paleta es el verde de contabilidad — el papel de barras verdes de los listados de conciliacion. Viene del material del sujeto, no de una paleta generica.",
+  "version": "1.0.0",
+  "extends": null,
+  "highlight": "github",
+  "tokens": {
+    "acento": "#1e4d3b",
+    "acento-tenue": "#f2f7f4",
+    "acento-medio": "#cfe0d7",
+    "tinta": "#16222b",
+    "tenue": "#5a6b74",
+    "regla": "#dbe3e0",
+    "papel-codigo": "#f4f7f5",
+    "aviso": "#8a5a12",
+    "aviso-fondo": "#fdfaf3",
+    "fuente": "\"Inter\", \"Segoe UI\", \"DejaVu Sans\", \"Liberation Sans\", system-ui, sans-serif",
+    "fuente-mono": "\"JetBrains Mono\", \"DejaVu Sans Mono\", \"Liberation Mono\", monospace",
+    "fuente-titulo": "var(--fuente)",
+    "portada-offset": "50mm"
+  },
+  "tokenSchema": {
+    "acento": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Acento",
+      "description": "Titulos, reglas de tabla y enfasis. Es el color con el que se identifica el documento. En _base es el verde de contabilidad."
+    },
+    "acento-tenue": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Acento tenue",
+      "description": "Fondo de citas y avisos. Debe ser casi blanco: si pesa, el documento parece un formulario."
+    },
+    "acento-medio": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Acento medio",
+      "description": "Bordes y separadores derivados del acento."
+    },
+    "tinta": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Tinta",
+      "description": "Color del texto. Nunca negro puro: en papel el negro absoluto endurece la lectura."
+    },
+    "tenue": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Texto tenue",
+      "description": "Metadata, pies de tabla, texto secundario."
+    },
+    "regla": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Reglas",
+      "description": "Lineas finas de separacion."
+    },
+    "papel-codigo": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Fondo de codigo"
+    },
+    "aviso": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Aviso",
+      "description": "Ocre quemado, no naranja de alerta web: el documento es impreso, no una interfaz."
+    },
+    "aviso-fondo": {
+      "type": "color",
+      "group": "paleta",
+      "label": "Fondo de aviso"
+    },
+    "fuente": {
+      "type": "font-stack",
+      "group": "tipografia",
+      "label": "Texto",
+      "description": "Pila completa con alternativas: el PDF se genera en maquinas donde la primera puede no estar."
+    },
+    "fuente-mono": {
+      "type": "font-stack",
+      "group": "tipografia",
+      "label": "Monoespaciada"
+    },
+    "fuente-titulo": {
+      "type": "font-stack",
+      "group": "tipografia",
+      "label": "Titulos",
+      "description": "Por defecto hereda de la fuente de texto."
+    },
+    "portada-offset": {
+      "type": "length",
+      "group": "portada",
+      "label": "Alto de portada",
+      "description": "Cuanto baja el titulo desde el borde superior. Con esto se pasa de portada entera a media carilla sin tocar CSS."
+    }
+  },
+  "page": {
+    "size": "A4",
+    "orientation": "portrait",
+    "margin": {
+      "top": "20mm",
+      "right": "18mm",
+      "bottom": "18mm",
+      "left": "18mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": false,
+    "break": "none"
+  },
+  "header": {
+    "enabled": false
+  },
+  "footer": {
+    "enabled": false
+  }
+}

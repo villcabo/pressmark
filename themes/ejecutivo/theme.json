@@ -1,0 +1,44 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "ejecutivo",
+  "name": "Ejecutivo",
+  "description": "Titulos en serif, azul de tinta, mucho aire. Para direccion y comite.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "tokens": {
+    "acento": "#1a3a5c",
+    "acento-tenue": "#f0f4f8",
+    "acento-medio": "#c6d5e2",
+    "tinta": "#16202b",
+    "tenue": "#5b6b7c",
+    "regla": "#d5dde5",
+    "papel-codigo": "#f5f8fa",
+    "fuente-titulo": "Georgia, \"DejaVu Serif\", \"Liberation Serif\", serif",
+    "portada-offset": "72mm"
+  },
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "26mm",
+      "right": "22mm",
+      "bottom": "20mm",
+      "left": "22mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": true,
+    "break": "page"
+  },
+  "footer": {
+    "enabled": true,
+    "left": "{{vars.confidencialidad}}",
+    "right": "Pagina {{page}} de {{pages}}",
+    "rule": true,
+    "fontSize": "7pt",
+    "color": "#7c8b99"
+  },
+  "vars": {
+    "confidencialidad": "Confidencial · uso interno"
+  }
+}

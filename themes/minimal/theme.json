@@ -1,0 +1,45 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "minimal",
+  "name": "Minimal",
+  "description": "Sin un solo color. Tipografia y espacio. Imprime igual en blanco y negro.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "tokens": {
+    "acento": "#1c1c1c",
+    "acento-tenue": "#f5f5f5",
+    "acento-medio": "#cfcfcf",
+    "tinta": "#131313",
+    "tenue": "#6d6d6d",
+    "regla": "#d9d9d9",
+    "papel-codigo": "#f6f6f6",
+    "aviso": "#4a4a4a",
+    "aviso-fondo": "#f7f7f7",
+    "portada-offset": "82mm"
+  },
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "28mm",
+      "right": "24mm",
+      "bottom": "22mm",
+      "left": "24mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": true,
+    "break": "page"
+  },
+  "footer": {
+    "enabled": true,
+    "left": "{{vars.confidencialidad}}",
+    "right": "Pagina {{page}} de {{pages}}",
+    "rule": true,
+    "fontSize": "7pt",
+    "color": "#8a8a8a"
+  },
+  "vars": {
+    "confidencialidad": "Confidencial · uso interno"
+  }
+}

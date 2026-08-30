@@ -1,0 +1,45 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "moderno",
+  "name": "Moderno",
+  "description": "Inter Display, ciruela, esquinas suaves. Propuestas y producto.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "tokens": {
+    "acento": "#6b2d5c",
+    "acento-tenue": "#faf3f8",
+    "acento-medio": "#ddc2d5",
+    "tinta": "#241d22",
+    "tenue": "#6b5f67",
+    "regla": "#e3d9e0",
+    "papel-codigo": "#faf7f9",
+    "aviso": "#8a5a12",
+    "fuente-titulo": "\"Inter Display\", \"Inter\", \"Segoe UI\", system-ui, sans-serif",
+    "portada-offset": "62mm"
+  },
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "24mm",
+      "right": "20mm",
+      "bottom": "20mm",
+      "left": "20mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": true,
+    "break": "page"
+  },
+  "footer": {
+    "enabled": true,
+    "left": "{{vars.confidencialidad}}",
+    "right": "Pagina {{page}} de {{pages}}",
+    "rule": true,
+    "fontSize": "7pt",
+    "color": "#7d928f"
+  },
+  "vars": {
+    "confidencialidad": "Confidencial · uso interno"
+  }
+}

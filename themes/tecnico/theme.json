@@ -1,0 +1,43 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "tecnico",
+  "name": "Tecnico",
+  "description": "Denso, grafito, portada de media carilla. El codigo manda.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "tokens": {
+    "acento": "#33475b",
+    "acento-tenue": "#f1f4f7",
+    "acento-medio": "#c8d3dd",
+    "tinta": "#1b2733",
+    "tenue": "#5d6b78",
+    "regla": "#d9e0e6",
+    "papel-codigo": "#f4f7f9",
+    "portada-offset": "22mm"
+  },
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "20mm",
+      "right": "15mm",
+      "bottom": "18mm",
+      "left": "15mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": true,
+    "break": "page"
+  },
+  "footer": {
+    "enabled": true,
+    "left": "{{vars.confidencialidad}}",
+    "right": "Pagina {{page}} de {{pages}}",
+    "rule": true,
+    "fontSize": "7pt",
+    "color": "#8a9499"
+  },
+  "vars": {
+    "confidencialidad": "Confidencial · uso interno"
+  }
+}

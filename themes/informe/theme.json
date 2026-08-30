@@ -1,0 +1,36 @@
+{
+  "$schema": "../theme.schema.json",
+  "id": "informe",
+  "name": "Informe",
+  "description": "Documento formal con portada y margenes amplios. El canonico.",
+  "version": "1.0.0",
+  "extends": "_base",
+  "tokens": {
+    "portada-offset": "58mm"
+  },
+  "page": {
+    "size": "A4",
+    "margin": {
+      "top": "24mm",
+      "right": "18mm",
+      "bottom": "18mm",
+      "left": "18mm"
+    },
+    "printBackground": true
+  },
+  "cover": {
+    "enabled": true,
+    "break": "page"
+  },
+  "footer": {
+    "enabled": true,
+    "left": "{{vars.confidencialidad}}",
+    "right": "Pagina {{page}} de {{pages}}",
+    "rule": true,
+    "fontSize": "7pt",
+    "color": "#8a9099"
+  },
+  "vars": {
+    "confidencialidad": "Confidencial · uso interno"
+  }
+}
