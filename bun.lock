@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "md2topdf-tools",
+      "name": "pressmark-tools",
       "devDependencies": {
         "ajv": "^8.17.1",
       },

@@ -5,7 +5,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/villcabo/md2topdf/cli/internal/theme"
+	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
 // Chrome renderiza header y footer en un contexto APARTE del documento: no ven

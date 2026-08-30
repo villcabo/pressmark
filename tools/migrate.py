@@ -5,7 +5,7 @@ Transformaciones, todas deterministas:
   1. El bloque :root { --x: y }  ->  theme.json .tokens   (y se saca del CSS)
   2. El bloque @page { }         ->  theme.json .page     (y se saca del CSS)
   3. El .pdf.json                ->  theme.json .page/.footer/.vars
-  4. Selectores 'body'           ->  '.m2p-doc'  (contrato de estructura HTML)
+  4. Selectores 'body'           ->  '.pm-doc'  (contrato de estructura HTML)
   5. '#title-block-header'       ->  eliminado   (fuga de pandoc)
 
 Cuando @page y .pdf.json declaran margenes distintos -- que es SIEMPRE --
@@ -62,7 +62,7 @@ def margen_shorthand(valor):
 def limpiar_css(css):
     """Contrato de estructura + saca la fuga de pandoc."""
     css = re.sub(r'^#title-block-header\s*\{[^}]*\}\s*\n?', '', css, flags=re.M)
-    css = re.sub(r'(?<![\w.#-])body(?=\s*[,{>])', '.m2p-doc', css)
+    css = re.sub(r'(?<![\w.#-])body(?=\s*[,{>])', '.pm-doc', css)
     return re.sub(r'\n{3,}', '\n\n', css).strip() + "\n"
 
 def migrar(nombre, css_src, json_src, destino, meta):
@@ -90,7 +90,7 @@ def migrar(nombre, css_src, json_src, destino, meta):
             "printBackground": bool(pdfopts.get("printBackground", True))}
 
     # --- portada: se detecta, no se asume ---------------------------------
-    # OJO: se evalua sobre el CSS crudo, ANTES de reescribir body -> .m2p-doc
+    # OJO: se evalua sobre el CSS crudo, ANTES de reescribir body -> .pm-doc
     tiene_portada = bool(re.search(r'body\s*>\s*h1:first-of-type', css))
     corta = bool(re.search(r'body\s*>\s*hr:first-of-type[^}]*break-after:\s*page', css))
     # El discriminador real es el salto de pagina, no el estilo del h1: 'nota'

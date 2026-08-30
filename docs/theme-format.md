@@ -96,12 +96,12 @@ Placeholders: `{{page}}`, `{{pages}}`, `{{title}}`, `{{date}}`, `{{file}}` y
 Los dos renderers envuelven el documento en:
 
 ```html
-<article class="m2p-doc"> ... </article>
+<article class="pm-doc"> ... </article>
 ```
 
 y garantizan que los bloques de primer nivel (`h1`, `p`, `hr`, `table`, ...) sean
 hijos **directos** de ese elemento. El CSS de los themes depende de eso:
-`.m2p-doc > h1:first-of-type` es lo que hace la portada.
+`.pm-doc > h1:first-of-type` es lo que hace la portada.
 
 Sin este contrato el mismo theme pack rendiria distinto en la terminal y en
 Obsidian, que es exactamente lo que el proyecto existe para evitar.

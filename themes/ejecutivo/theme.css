@@ -7,11 +7,11 @@
    ========================================================================== */
 
 html { font-size: 11pt; }
-.m2p-doc { line-height: 1.68; }
+.pm-doc { line-height: 1.68; }
 
 /* ── Portada ──────────────────────────────────────────────────────────── */
 
-.m2p-doc > h1:first-of-type {
+.pm-doc > h1:first-of-type {
   margin-top: var(--portada-offset);
   font-family: var(--fuente-titulo);
   font-size: 2.5rem;
@@ -21,12 +21,12 @@ html { font-size: 11pt; }
   color: var(--acento);
 }
 
-.m2p-doc > h1:first-of-type code {
+.pm-doc > h1:first-of-type code {
   background: none; padding: 0;
   font-size: 0.74em; color: var(--acento); font-weight: 500;
 }
 
-.m2p-doc > h1:first-of-type + p {
+.pm-doc > h1:first-of-type + p {
   margin-top: 12mm;
   padding-top: 7mm;
   border-top: 0.75pt solid var(--acento);
@@ -35,7 +35,7 @@ html { font-size: 11pt; }
   line-height: 2.1;
 }
 
-.m2p-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
 
 /* ── Títulos en serif, con aire ──────────────────────────────────────── */
 

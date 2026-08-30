@@ -103,7 +103,7 @@ export async function generar(html: string, opts: PrintOptions): Promise<Uint8Ar
   // resolverlo en tiempo de build.
   const remote = requireRemote();
 
-  const dir = await mkdtemp(join(tmpdir(), "md2topdf-"));
+  const dir = await mkdtemp(join(tmpdir(), "pressmark-"));
   const archivo = join(dir, "doc.html");
   await writeFile(archivo, html, "utf8");
 

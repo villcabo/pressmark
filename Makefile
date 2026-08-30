@@ -16,8 +16,8 @@ sync-themes:
 	@bun tools/gen-plugin-themes.mjs
 
 build: validate sync-themes
-	@cd cli && go build -o ../dist/md2topdf ./cmd/md2topdf
-	@echo "binario -> dist/md2topdf"
+	@cd cli && go build -o ../dist/pressmark ./cmd/pressmark
+	@echo "binario -> dist/pressmark"
 
 validate:
 	@bun tools/validate.mjs

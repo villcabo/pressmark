@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/villcabo/md2topdf/cli/internal/theme"
+	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
 func TestToInches(t *testing.T) {

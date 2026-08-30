@@ -66,7 +66,7 @@ func UserDir(explicito string) fs.FS {
 	if err != nil {
 		return nil
 	}
-	d := home + "/.config/md2topdf/themes"
+	d := home + "/.config/pressmark/themes"
 	if st, err := os.Stat(d); err == nil && st.IsDir() {
 		return os.DirFS(d)
 	}

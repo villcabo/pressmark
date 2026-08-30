@@ -10,7 +10,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/villcabo/md2topdf/cli/internal/theme"
+	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
 // Estos casos los corren TAMBIEN el cargador de TypeScript del plugin. Viven en

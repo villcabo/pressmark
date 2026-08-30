@@ -1,4 +1,4 @@
-// md2topdf convierte Markdown a PDF aplicando un theme pack.
+// pressmark convierte Markdown a PDF aplicando un theme pack.
 //
 // El motor de maquetado es Chrome. Este binario no renderiza: lo maneja por
 // CDP. Es una diferencia importante — ningun paquete de Go sabe maquetar CSS
@@ -16,20 +16,20 @@ import (
 	"strings"
 
 	"github.com/chromedp/chromedp"
-	"github.com/villcabo/md2topdf/cli/internal/browser"
+	"github.com/villcabo/pressmark/cli/internal/browser"
 
-	"github.com/villcabo/md2topdf/cli/internal/mermaid"
-	"github.com/villcabo/md2topdf/cli/internal/render"
-	"github.com/villcabo/md2topdf/cli/internal/theme"
-	"github.com/villcabo/md2topdf/cli/internal/themes"
+	"github.com/villcabo/pressmark/cli/internal/mermaid"
+	"github.com/villcabo/pressmark/cli/internal/render"
+	"github.com/villcabo/pressmark/cli/internal/theme"
+	"github.com/villcabo/pressmark/cli/internal/themes"
 )
 
-const uso = `md2topdf — convierte Markdown a PDF con un theme pack
+const uso = `pressmark — convierte Markdown a PDF con un theme pack
 
   El PDF se guarda al lado del .md, con el mismo nombre.
 
 USO
-  md2topdf <archivo.md | carpeta | *.md> [opciones]
+  pressmark <archivo.md | carpeta | *.md> [opciones]
 
 OPCIONES
   -e, --estilo <id>    Theme pack a aplicar (por defecto: informe)
@@ -44,7 +44,7 @@ OPCIONES
   -h, --ayuda          Esta ayuda
 
 THEME PACKS
-  Se buscan primero en --temas (o ~/.config/md2topdf/themes) y despues entre
+  Se buscan primero en --temas (o ~/.config/pressmark/themes) y despues entre
   los que vienen dentro del binario. Un theme propio puede heredar de uno
   embebido: extends "_base" funciona aunque _base no este en tu disco.
 `
@@ -63,14 +63,14 @@ type opciones struct {
 
 func main() {
 	if err := ejecutar(); err != nil {
-		fmt.Fprintln(os.Stderr, "md2topdf:", err)
+		fmt.Fprintln(os.Stderr, "pressmark:", err)
 		os.Exit(1)
 	}
 }
 
 func ejecutar() error {
 	var o opciones
-	fs_ := flag.NewFlagSet("md2topdf", flag.ContinueOnError)
+	fs_ := flag.NewFlagSet("pressmark", flag.ContinueOnError)
 	fs_.SetOutput(os.Stderr)
 	fs_.Usage = func() { fmt.Fprint(os.Stderr, uso) }
 
@@ -120,7 +120,7 @@ func ejecutar() error {
 // reordenar adelanta los flags y manda los archivos al final.
 //
 // El paquete flag corta el parseo en el primer argumento posicional, asi que
-// `md2topdf informe.md --estilo nota` le llega como tres archivos. El script de
+// `pressmark informe.md --estilo nota` le llega como tres archivos. El script de
 // bash que esto reemplaza aceptaba flags en cualquier posicion, y romper esa
 // ergonomia solo para no escribir esta funcion no vale la pena.
 func reordenar(fset *flag.FlagSet, args []string) []string {

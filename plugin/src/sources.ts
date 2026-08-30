@@ -1,7 +1,7 @@
 /**
  * Fuentes de theme packs para el plugin.
  *
- * Los packs del usuario viven DENTRO del vault, en .obsidian/md2topdf/themes/.
+ * Los packs del usuario viven DENTRO del vault, en .obsidian/pressmark/themes/.
  * Es una decision deliberada: la politica del community store permite leer
  * fuera del vault, pero obliga a justificarlo en el submission. Leer de adentro
  * usa la API Vault, no necesita justificacion y no agrega friccion a la
@@ -12,7 +12,7 @@ import { normalizePath } from "obsidian";
 import type { ThemeFS } from "./theme";
 import { EMBEDDED } from "./themes.generated";
 
-export const CARPETA_USUARIO = ".obsidian/md2topdf/themes";
+export const CARPETA_USUARIO = ".obsidian/pressmark/themes";
 
 /** Los packs que viajan dentro del plugin. */
 export function embeddedFS(): ThemeFS {

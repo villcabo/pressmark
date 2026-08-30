@@ -7,7 +7,7 @@
  * exista.
  */
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type Md2ToPdfPlugin from "./main";
+import type PressmarkPlugin from "./main";
 import type { Resolved, TokenDef } from "./theme";
 
 export interface Ajustes {
@@ -30,7 +30,7 @@ const ORDEN_GRUPOS = ["paleta", "tipografia", "portada"];
 export class PantallaAjustes extends PluginSettingTab {
   constructor(
     app: App,
-    private plugin: Md2ToPdfPlugin,
+    private plugin: PressmarkPlugin,
   ) {
     super(app, plugin);
   }

@@ -94,12 +94,12 @@ portada entera a media carilla desde la UI, sin tocar CSS:
 | `ejecutivo` | 72mm |
 | `minimal` | 82mm |
 
-## 5. Contrato de estructura HTML: `body` → `.m2p-doc`
+## 5. Contrato de estructura HTML: `body` → `.pm-doc`
 
 Los selectores eran `body > h1:first-of-type`. En Obsidian el contenido no
 cuelga de `<body>`, así que **la portada no habría funcionado en el plugin**.
 
-Ambos renderers deben envolver el documento en `<article class="m2p-doc">` y
+Ambos renderers deben envolver el documento en `<article class="pm-doc">` y
 garantizar que los bloques de primer nivel sean hijos DIRECTOS de ese elemento.
 Ese es el contrato que hace que el mismo theme pack rinda igual en los dos lados.
 

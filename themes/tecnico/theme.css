@@ -8,11 +8,11 @@
    ========================================================================== */
 
 html { font-size: 9.5pt; }
-.m2p-doc { line-height: 1.46; }
+.pm-doc { line-height: 1.46; }
 
 /* ── Portada de media carilla ────────────────────────────────────────── */
 
-.m2p-doc > h1:first-of-type {
+.pm-doc > h1:first-of-type {
   margin-top: var(--portada-offset);
   font-size: 1.95rem;
   font-weight: 700;
@@ -20,12 +20,12 @@ html { font-size: 9.5pt; }
   color: var(--acento);
 }
 
-.m2p-doc > h1:first-of-type code {
+.pm-doc > h1:first-of-type code {
   background: none; padding: 0;
   font-size: 0.78em; color: var(--acento); font-weight: 600;
 }
 
-.m2p-doc > h1:first-of-type + p {
+.pm-doc > h1:first-of-type + p {
   margin-top: 5mm;
   padding: 3.5mm 4.5mm;
   background: var(--acento-tenue);
@@ -35,7 +35,7 @@ html { font-size: 9.5pt; }
   line-height: 1.75;
 }
 
-.m2p-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
 
 /* ── Títulos compactos, numerables a ojo ─────────────────────────────── */
 

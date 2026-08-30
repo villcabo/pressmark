@@ -9,13 +9,13 @@
    ========================================================================== */
 
 html { font-size: 10pt; }
-.m2p-doc { line-height: 1.5; }
+.pm-doc { line-height: 1.5; }
 
 /* ── Cabecera del documento ───────────────────────────────────────────────
    El h1 y la línea de metadata forman un bloque: título pegado a su dato,
    y una regla gruesa que cierra. Sin portada, esto es lo que da autoridad. */
 
-.m2p-doc > h1:first-of-type {
+.pm-doc > h1:first-of-type {
   margin: 0 0 0.15em;
   font-size: 1.62rem;
   font-weight: 700;
@@ -23,7 +23,7 @@ html { font-size: 10pt; }
   color: var(--acento);
 }
 
-.m2p-doc > h1:first-of-type code {
+.pm-doc > h1:first-of-type code {
   background: none;
   padding: 0;
   font-size: 0.8em;
@@ -31,7 +31,7 @@ html { font-size: 10pt; }
   color: var(--acento);
 }
 
-.m2p-doc > h1:first-of-type + p {
+.pm-doc > h1:first-of-type + p {
   margin: 0 0 1.4em;
   padding-bottom: 0.7em;
   border-bottom: 2pt solid var(--acento);
@@ -41,7 +41,7 @@ html { font-size: 10pt; }
 }
 
 /* Sin portada: el primer separador es una regla más, no un salto de página */
-.m2p-doc > hr:first-of-type {
+.pm-doc > hr:first-of-type {
   break-after: auto;
   border: 0;
   border-top: 0.5pt solid var(--regla);
@@ -51,7 +51,7 @@ html { font-size: 10pt; }
 
 /* Si ese <hr> viene pegado a la cabecera, sobra: la regla del bloque de
    metadata ya cierra. Dos líneas seguidas se leen como un error de armado. */
-.m2p-doc > h1:first-of-type + p + hr { display: none; }
+.pm-doc > h1:first-of-type + p + hr { display: none; }
 
 /* ── Densidad ─────────────────────────────────────────────────────────── */
 

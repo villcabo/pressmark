@@ -13,8 +13,8 @@
 import { Component, MarkdownRenderer, type App } from "obsidian";
 import type { Resolved, Band, Margin } from "./theme";
 
-/** Los themes dependen de `.m2p-doc > h1:first-of-type` para armar la portada. */
-export const WRAPPER = "m2p-doc";
+/** Los themes dependen de `.pm-doc > h1:first-of-type` para armar la portada. */
+export const WRAPPER = "pm-doc";
 
 /**
  * Obsidian a veces envuelve cada bloque en un div.el-*. Si eso queda, los

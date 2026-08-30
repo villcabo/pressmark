@@ -1,5 +1,5 @@
 /* ============================================================================
-   _base/theme.css — estilos comunes a todos los theme packs de md2topdf.
+   _base/theme.css — estilos comunes a todos los theme packs de pressmark.
    Nunca se usa sola: el renderer la carga primero y encima apila el tema.
 
    La geometria de pagina (@page) y la paleta (:root) NO viven aca: salen de
@@ -19,7 +19,7 @@
    Para cambiar la identidad visual, tocar los tokens de theme.json.
    ========================================================================== */
 
-.m2p-doc {
+.pm-doc {
   font-family: var(--fuente);
   color: var(--tinta);
   line-height: 1.5;
@@ -210,7 +210,7 @@ nav#TOC a { text-decoration: none; border: none; color: var(--tinta); }
 /* ── Ajustes finos de impresión ──────────────────────────────────────── */
 
 @media print {
-  .m2p-doc { padding: 0; }
+  .pm-doc { padding: 0; }
   /* El PDF no es clickeable en papel: mostrar la URL de los enlaces externos */
   a[href^="http"]::after {
     content: " (" attr(href) ")";

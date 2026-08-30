@@ -70,7 +70,7 @@ func (c *Chrome) Close() {
 // con file://. Suena rebuscado y no lo es: es lo unico que hace que las rutas
 // relativas de las imagenes resuelvan como el autor las escribio.
 func (c *Chrome) PDF(htmlDoc []byte, baseDir string, opts PDFOptions, prep ...Prep) ([]byte, error) {
-	tmp, err := os.CreateTemp(baseDir, ".md2topdf-*.html")
+	tmp, err := os.CreateTemp(baseDir, ".pressmark-*.html")
 	if err != nil {
 		return nil, fmt.Errorf("no pude crear el temporal en %s: %w", baseDir, err)
 	}

@@ -13,14 +13,14 @@ import (
 	"github.com/yuin/goldmark/parser"
 	ghtml "github.com/yuin/goldmark/renderer/html"
 
-	"github.com/villcabo/md2topdf/cli/internal/theme"
+	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
 // Wrapper es el contrato de estructura HTML que comparten el CLI y el plugin.
 // Los bloques de primer nivel tienen que ser hijos DIRECTOS de este elemento:
-// el CSS de los themes depende de eso (.m2p-doc > h1:first-of-type arma la
+// el CSS de los themes depende de eso (.pm-doc > h1:first-of-type arma la
 // portada). Si el plugin anida el contenido, la portada no funciona.
-const Wrapper = "m2p-doc"
+const Wrapper = "pm-doc"
 
 func Markdown(src []byte, highlight string) ([]byte, error) {
 	if highlight == "" {

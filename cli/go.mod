@@ -1,4 +1,4 @@
-module github.com/villcabo/md2topdf/cli
+module github.com/villcabo/pressmark/cli
 
 go 1.26
 

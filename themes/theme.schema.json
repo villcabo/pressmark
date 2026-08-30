@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/villcabo/md2topdf/blob/main/themes/theme.schema.json",
-  "title": "md2topdf theme pack",
+  "$id": "https://github.com/villcabo/pressmark/blob/main/themes/theme.schema.json",
+  "title": "pressmark theme pack",
   "description": "Un theme pack describe la identidad visual y la geometria de pagina de un documento. Lo consumen por igual el CLI y el plugin de Obsidian: es el unico contrato compartido entre ambos.",
   "type": "object",
   "required": ["id", "name", "version"],

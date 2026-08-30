@@ -1,4 +1,4 @@
-# md2topdf
+# pressmark
 
 Markdown a PDF con formatos definidos y personalizables, desde la terminal
 **y** desde Obsidian — con el mismo resultado.
@@ -51,12 +51,12 @@ Ver [`docs/theme-format.md`](docs/theme-format.md) para el formato completo.
 ## CLI
 
 ```bash
-make build                                   # -> dist/md2topdf
+make build                                   # -> dist/pressmark
 
-md2topdf informe.md                          # PDF al lado del .md
-md2topdf informe.md --estilo tecnico         # otro theme
-md2topdf reportes/ --estilo nota --carta     # toda una carpeta
-md2topdf --listar                            # themes disponibles
+pressmark informe.md                          # PDF al lado del .md
+pressmark informe.md --estilo tecnico         # otro theme
+pressmark reportes/ --estilo nota --carta     # toda una carpeta
+pressmark --listar                            # themes disponibles
 ```
 
 Una sola dependencia externa: **un Chrome instalado**. Verificado con stubs que
@@ -87,11 +87,11 @@ make plugin      # -> plugin/main.js
 ```
 
 Para probarlo, copiar `manifest.json`, `main.js` y `styles.css` (si existe) a
-`<vault>/.obsidian/plugins/md2topdf/`.
+`<vault>/.obsidian/plugins/pressmark/`.
 
 ### Theme packs propios
 
-Van en `<vault>/.obsidian/md2topdf/themes/<id>/`. Se leen con la API Vault, no
+Van en `<vault>/.obsidian/pressmark/themes/<id>/`. Se leen con la API Vault, no
 hace falta permiso de nada. Un pack propio puede heredar de uno embebido:
 `extends: "_base"` funciona aunque `_base` no este en el vault.
 
@@ -110,7 +110,7 @@ de Obsidian, y tiene que ser asi. Se garantiza con tres cosas:
 
 1. **El theme pack**, que es literalmente el mismo archivo.
 2. **El contrato de estructura HTML**: los dos envuelven en
-   `<article class="m2p-doc">` y garantizan que los bloques de primer nivel
+   `<article class="pm-doc">` y garantizan que los bloques de primer nivel
    sean hijos DIRECTOS. El CSS de la portada depende de eso.
 3. **Los fixtures de conformidad** en `testdata/conformance/`: 13 casos que
    definen la semantica de herencia y que corren **las dos** implementaciones.

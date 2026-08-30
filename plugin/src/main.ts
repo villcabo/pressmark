@@ -1,5 +1,5 @@
 /**
- * md2topdf — exporta notas a PDF usando theme packs portables.
+ * pressmark — exporta notas a PDF usando theme packs portables.
  *
  * El motor de maquetado es Chromium, igual que en el CLI. La diferencia es
  * quien lo maneja: aca es el Electron que Obsidian ya trae. Lo que NO cambia es
@@ -22,7 +22,7 @@ import {
   type Ajustes,
 } from "./settings";
 
-export default class Md2ToPdfPlugin extends Plugin {
+export default class PressmarkPlugin extends Plugin {
   ajustes: Ajustes = { ...AJUSTES_POR_DEFECTO };
   private packs!: ThemeFS;
 
@@ -132,7 +132,7 @@ export default class Md2ToPdfPlugin extends Plugin {
       }
     } catch (e) {
       aviso.hide();
-      console.error("md2topdf:", e);
+      console.error("pressmark:", e);
       new Notice(`No pude exportar: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       comp.unload();
