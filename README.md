@@ -47,18 +47,60 @@ Ver [`docs/theme-format.md`](docs/theme-format.md) para el formato completo.
 | `minimal` | entera | Sin color. Imprime igual en blanco y negro. |
 | `moderno` | entera | Propuestas y producto. |
 
+## CLI
+
+```bash
+make build                                   # -> dist/md2topdf
+
+md2topdf informe.md                          # PDF al lado del .md
+md2topdf informe.md --estilo tecnico         # otro theme
+md2topdf reportes/ --estilo nota --carta     # toda una carpeta
+md2topdf --listar                            # themes disponibles
+```
+
+Una sola dependencia externa: **un Chrome instalado**. Verificado con stubs que
+fallan si algo invoca `node`, `bun`, `npm`, `python3`, `jq`, `mmdc`, `md-to-pdf`
+o `pandoc` — ninguno se dispara.
+
+### Mermaid sin `mmdc`
+
+Los bloques ` ```mermaid ` se renderizan **dentro de la misma pagina** que se
+imprime. mermaid.js viaja embebido en el binario y el render asincrono se espera
+con `awaitPromise` de CDP antes de llamar a `printToPDF`.
+
+El script viejo no podia hacer esto y su comentario explicaba por que: "inyectar
+mermaid.js no sirve, Puppeteer imprime sin esperarlo". Era cierto del pipeline
+cerrado de `md-to-pdf`, no de CDP. Manejando Chrome uno mismo no hay carrera.
+
+Los diagramas toman la paleta del theme, asi que no desentonan con el documento.
+
 ## Estado
 
-Fase 0 — formato definido, temas migrados. El CLI y el plugin todavia no existen.
+| Fase | Que | Estado |
+| ---- | --- | ------ |
+| 0 | Formato de theme pack + migracion de los 6 temas | hecho |
+| 1 | CLI en Go | hecho |
+| 2 | Plugin de Obsidian | pendiente |
+| 3 | UI de personalizacion + import/export de packs | pendiente |
+| 4 | Submission al community store | pendiente |
+
 Ver [`MIGRATION.md`](MIGRATION.md) para lo que cambio al migrar, incluido un bug
-de margenes duplicados que arrastraban los 6 temas.
+de margenes que arrastraban los 6 temas y la medicion que lo resolvio.
 
 ## Desarrollo
 
 ```bash
 bun install
 bun run validate     # valida los theme packs: esquema + contrato de tokens
+make build           # valida, sincroniza themes y compila
+make test            # tests de Go
 ```
+
+### Dependencias embebidas
+
+- [mermaid](https://github.com/mermaid-js/mermaid) 11.4.1 (MIT), en
+  `cli/internal/mermaid/vendor/`. Se versiona a proposito: el binario no baja
+  nada de la red en tiempo de ejecucion.
 
 ## Licencia
 

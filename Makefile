@@ -1,0 +1,28 @@
+# themes/ es la fuente de verdad. go:embed no puede usar '..', asi que hay que
+# copiarlas adentro del modulo antes de compilar. La copia esta gitignoreada.
+THEMES_SRC := themes
+THEMES_DST := cli/internal/themes/packs
+
+.PHONY: all sync-themes build validate test clean
+
+all: build
+
+sync-themes:
+	@rm -rf $(THEMES_DST)
+	@mkdir -p $(THEMES_DST)
+	@cp -R $(THEMES_SRC)/. $(THEMES_DST)/
+	@rm -f $(THEMES_DST)/theme.schema.json
+	@echo "themes sincronizados -> $(THEMES_DST)"
+
+build: validate sync-themes
+	@cd cli && go build -o ../dist/md2topdf ./cmd/md2topdf
+	@echo "binario -> dist/md2topdf"
+
+validate:
+	@bun tools/validate.mjs
+
+test: sync-themes
+	@cd cli && go test ./...
+
+clean:
+	@rm -rf dist $(THEMES_DST)
