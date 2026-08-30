@@ -15,7 +15,7 @@ import (
 // El margen lateral lo inyectamos nosotros desde page.margin. Ese es el punto:
 // en el formato viejo estaba escrito a mano en el template y quedo 1mm corrido
 // del cuerpo en los 6 temas.
-func BandHTML(b *theme.Band, m *theme.Margin, vars map[string]string, title string) string {
+func BandHTML(b *theme.Band, m *theme.Margin, vars map[string]string, title, locale string) string {
 	if b == nil || b.Enabled == nil || !*b.Enabled {
 		return "<span></span>" // Chrome exige algo; vacio de verdad lo rompe
 	}
@@ -50,15 +50,29 @@ func BandHTML(b *theme.Band, m *theme.Margin, vars map[string]string, title stri
 	sb.WriteString(`">`)
 
 	// Tres ranuras siempre, aunque esten vacias: si no, flex desbalancea el centro.
-	for _, s := range []*string{b.Left, b.Center, b.Right} {
+	for _, s := range []*theme.Localized{b.Left, b.Center, b.Right} {
 		sb.WriteString("<span>")
 		if s != nil {
-			sb.WriteString(expand(*s, vars, title))
+			sb.WriteString(expand(s.Resolve(locale), vars, title))
 		}
 		sb.WriteString("</span>")
 	}
 	sb.WriteString("</div>")
 	return sb.String()
+}
+
+// MergeVars junta las vars del theme con los campos del frontmatter, que
+// quedan accesibles como {{fm.clave}}. Asi un pie puede llevar el sistema o el
+// ambiente de la nota sin que el theme sepa nada de ese documento.
+func MergeVars(vars map[string]theme.Localized, fm map[string]string, locale string) map[string]string {
+	out := make(map[string]string, len(vars)+len(fm))
+	for k, v := range vars {
+		out[k] = v.Resolve(locale)
+	}
+	for k, v := range fm {
+		out["fm."+k] = v
+	}
+	return out
 }
 
 // expand resuelve los placeholders. pageNumber/totalPages/title/date son clases

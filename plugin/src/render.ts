@@ -11,10 +11,9 @@
  * CONTRATO DE ESTRUCTURA que impone este archivo.
  */
 import { Component, MarkdownRenderer, type App } from "obsidian";
-import type { Resolved, Band, Margin } from "./theme";
+import { WRAPPER } from "./document";
 
-/** Los themes dependen de `.pm-doc > h1:first-of-type` para armar la portada. */
-export const WRAPPER = "pm-doc";
+export * from "./document";
 
 /**
  * Obsidian a veces envuelve cada bloque en un div.el-*. Si eso queda, los
@@ -34,6 +33,47 @@ function aplanar(raiz: HTMLElement): void {
   }
 }
 
+/**
+ * Elementos que Obsidian agrega para la INTERFAZ, no para el documento.
+ *
+ * El renderer de Obsidian devuelve el DOM tal como se ve en la app, botones
+ * incluidos. El de copiar codigo termino impreso adentro de un bloque de codigo
+ * en un PDF real. Nada de esto tiene sentido en papel.
+ */
+const CHROME = [
+  ".copy-code-button",
+  ".edit-block-button",
+  ".collapse-indicator",
+  ".heading-collapse-indicator",
+  ".callout-fold",
+  ".markdown-preview-pusher",
+  ".metadata-container",
+  ".frontmatter",
+  ".frontmatter-container",
+  ".mod-header",
+  ".mod-footer",
+  ".embed-buttons",
+  ".internal-embed .file-embed-title",
+].join(",");
+
+function limpiarUI(raiz: HTMLElement): void {
+  raiz.querySelectorAll(CHROME).forEach((e) => e.remove());
+
+  // Los botones que quedan son de la interfaz: el markdown no genera ninguno.
+  raiz.querySelectorAll("button").forEach((e) => e.remove());
+
+  // Un callout plegado se imprime ABIERTO: en papel no se despliega nada.
+  raiz.querySelectorAll(".callout.is-collapsed").forEach((e) => {
+    e.removeClass("is-collapsed");
+    e.setAttribute("data-callout-fold", "+");
+  });
+  raiz.querySelectorAll(".is-collapsed").forEach((e) => e.removeClass("is-collapsed"));
+
+  // Nada editable ni enfocable en un documento impreso.
+  raiz.querySelectorAll("[contenteditable]").forEach((e) => e.removeAttribute("contenteditable"));
+  raiz.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
+}
+
 export async function renderBody(
   app: App,
   markdown: string,
@@ -43,114 +83,7 @@ export async function renderBody(
   const el = document.createElement("div");
   el.addClass(WRAPPER);
   await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
+  limpiarUI(el);
   aplanar(el);
   return el.innerHTML;
-}
-
-/** Emite los design tokens como variables CSS. Ordenados: salida estable. */
-export function tokensCSS(tokens: Record<string, string> | undefined): string {
-  if (!tokens || Object.keys(tokens).length === 0) return "";
-  const filas = Object.keys(tokens)
-    .sort()
-    .map((k) => `  --${k}: ${tokens[k]};`)
-    .join("\n");
-  return `:root {\n${filas}\n}\n`;
-}
-
-export function coverCSS(t: Resolved): string {
-  if (!t.cover?.enabled) return "";
-  if (t.cover.break === "none") return "";
-  return `.${WRAPPER} > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }\n`;
-}
-
-export function documentHTML(titulo: string, body: string, t: Resolved): string {
-  return `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<title>${escapar(titulo)}</title>
-<style>
-html, body { margin: 0; padding: 0; }
-</style>
-<style>
-${tokensCSS(t.tokens)}</style>
-<style>
-${t.css}
-${coverCSS(t)}</style>
-</head>
-<body>
-<article class="${WRAPPER}">
-${body}
-</article>
-</body>
-</html>
-`;
-}
-
-/**
- * Banda de encabezado o pie para printToPDF.
- *
- * Chrome las renderiza en un contexto APARTE: no ven el CSS de la pagina ni
- * heredan tamano de fuente. Todo va inline, y el margen lateral lo inyectamos
- * desde page.margin — escribirlo a mano fue lo que dejo el pie 1mm corrido del
- * cuerpo en el formato viejo.
- */
-export function bandHTML(
-  b: Band | undefined,
-  m: Margin | undefined,
-  vars: Record<string, string> | undefined,
-  titulo: string,
-): string {
-  if (!b?.enabled) return "<span></span>";
-
-  const izq = m?.left ?? "0";
-  const der = m?.right ?? "0";
-  const size = b.fontSize ?? "7pt";
-  const color = b.color ?? "#8a9099";
-  const regla = b.rule ? "border-top:0.5pt solid #e4e7ea;padding-top:2mm;" : "";
-
-  const ranuras = [b.left, b.center, b.right]
-    .map((s) => `<span>${s ? expandir(s, vars, titulo) : ""}</span>`)
-    .join("");
-
-  return (
-    `<div style="width:100%;box-sizing:border-box;` +
-    `font-family:'Inter','Segoe UI',sans-serif;font-size:${size};color:${color};` +
-    `padding:0 ${der} 0 ${izq};display:flex;justify-content:space-between;` +
-    `align-items:center;${regla}">${ranuras}</div>`
-  );
-}
-
-function expandir(
-  s: string,
-  vars: Record<string, string> | undefined,
-  titulo: string,
-): string {
-  let out = s
-    .replaceAll("{{page}}", '<span class="pageNumber"></span>')
-    .replaceAll("{{pages}}", '<span class="totalPages"></span>')
-    .replaceAll("{{date}}", '<span class="date"></span>')
-    .replaceAll("{{file}}", '<span class="url"></span>')
-    .replaceAll("{{title}}", escapar(titulo));
-  for (const [k, v] of Object.entries(vars ?? {})) {
-    out = out.replaceAll(`{{vars.${k}}}`, escapar(v));
-  }
-  return out;
-}
-
-function escapar(s: string): string {
-  return s
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-/** Titulo del primer h1, para {{title}} y para el <title> del documento. */
-export function tituloDe(markdown: string, porDefecto: string): string {
-  for (const l of markdown.split("\n")) {
-    const t = l.trim();
-    if (t.startsWith("# ")) return t.slice(2).trim();
-  }
-  return porDefecto;
 }

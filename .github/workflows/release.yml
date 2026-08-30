@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # El tag TIENE que coincidir con manifest.json: el store lo exige y un
+      # release desalineado se rechaza sin decir por que.
+      - name: Tag must match manifest.json
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          man=$(jq -r .version manifest.json)
+          if [ "$tag" != "$man" ]; then
+            echo "tag $tag != manifest.json $man"
+            exit 1
+          fi
+
+      - name: Install deps
+        run: |
+          bun install --frozen-lockfile
+          cd plugin && bun install --frozen-lockfile
+
+      - name: Validate theme packs
+        run: bun tools/validate.mjs
+
+      - name: Build plugin
+        run: |
+          make sync-themes
+          cd plugin && bun run build
+
+      # Exactamente los tres archivos que el store espera como assets.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF#refs/tags/}" \
+            --title "${GITHUB_REF#refs/tags/}" \
+            --generate-notes \
+            main.js manifest.json styles.css

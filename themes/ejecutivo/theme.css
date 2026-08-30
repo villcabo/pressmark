@@ -26,7 +26,8 @@ html { font-size: 11pt; }
   font-size: 0.74em; color: var(--acento); font-weight: 500;
 }
 
-.pm-doc > h1:first-of-type + p {
+.pm-doc > h1:first-of-type + p,
+.pm-doc > h1:first-of-type + table {
   margin-top: 12mm;
   padding-top: 7mm;
   border-top: 0.75pt solid var(--acento);

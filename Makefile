@@ -3,7 +3,7 @@
 THEMES_SRC := themes
 THEMES_DST := cli/internal/themes/packs
 
-.PHONY: all sync-themes build plugin validate test clean
+.PHONY: all sync-themes build plugin install validate test clean
 
 all: build
 
@@ -28,7 +28,16 @@ test: sync-themes
 
 plugin: validate sync-themes
 	@cd plugin && bun run build
-	@echo "plugin -> plugin/main.js"
+	@echo "plugin -> main.js"
+
+# Instala el plugin en un vault. VAULT se puede pasar por linea de comandos:
+#   make install VAULT=/ruta/a/mi/vault
+VAULT ?= $(HOME)/.obsidian/personal/MarckV_Personal
+
+install: plugin
+	@mkdir -p "$(VAULT)/.obsidian/plugins/pressmark"
+	@cp manifest.json main.js styles.css "$(VAULT)/.obsidian/plugins/pressmark/"
+	@echo "instalado -> $(VAULT)/.obsidian/plugins/pressmark"
 
 clean:
-	@rm -rf dist $(THEMES_DST) plugin/main.js plugin/src/themes.generated.ts
+	@rm -rf dist $(THEMES_DST) main.js plugin/src/themes.generated.ts

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: cli/go.mod
+          cache-dependency-path: cli/go.sum
+
+      - name: Install tooling deps
+        run: |
+          bun install --frozen-lockfile
+          cd plugin && bun install --frozen-lockfile
+
+      # Un theme pack invalido no debe llegar ni al CLI ni al plugin.
+      - name: Validate theme packs
+        run: bun tools/validate.mjs
+
+      - name: Sync themes into both consumers
+        run: make sync-themes
+
+      - name: Go tests
+        run: cd cli && go test ./...
+
+      - name: Go vet
+        run: cd cli && go vet ./...
+
+      - name: gofmt
+        run: |
+          out=$(gofmt -l cli)
+          if [ -n "$out" ]; then echo "sin formatear:"; echo "$out"; exit 1; fi
+
+      - name: TypeScript typecheck
+        run: cd plugin && bunx tsc --noEmit
+
+      # Los fixtures de testdata/conformance/ corren en los DOS lados: si Go y
+      # TypeScript divergen, esto falla.
+      - name: TypeScript tests
+        run: cd plugin && bun test
+
+      - name: Build CLI
+        run: cd cli && go build ./...
+
+      - name: Build plugin
+        run: cd plugin && bun run build
+
+      - name: The built artifacts must exist at the repo root
+        run: test -f main.js && test -f manifest.json && test -f styles.css

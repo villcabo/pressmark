@@ -4,61 +4,92 @@
   "title": "pressmark theme pack",
   "description": "Un theme pack describe la identidad visual y la geometria de pagina de un documento. Lo consumen por igual el CLI y el plugin de Obsidian: es el unico contrato compartido entre ambos.",
   "type": "object",
-  "required": ["id", "name", "version"],
+  "required": [
+    "id",
+    "name",
+    "version"
+  ],
   "additionalProperties": false,
-
   "properties": {
-    "$schema": { "type": "string" },
-
+    "$schema": {
+      "type": "string"
+    },
     "id": {
       "type": "string",
       "pattern": "^_?[a-z0-9][a-z0-9-]*$",
       "description": "Identificador unico. Debe coincidir con el nombre de la carpeta. El prefijo _ marca un pack INTERNO: se puede heredar de el, pero no se ofrece al usuario para elegir."
     },
-    "name":        { "type": "string", "description": "Nombre visible en la UI." },
-    "description": { "type": "string" },
-    "version":     { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
-    "author":      { "type": "string" },
-
+    "name": {
+      "$ref": "#/definitions/localized",
+      "description": "Nombre visible en la UI."
+    },
+    "description": {
+      "$ref": "#/definitions/localized"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "author": {
+      "type": "string"
+    },
     "extends": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "default": "_base",
       "description": "Theme del que se hereda. La herencia es superficial y por clave: tokens, page, cover, header, footer y vars se mezclan clave a clave; el CSS se APILA (primero el del padre, despues el propio). null = no heredar nada."
     },
-
     "highlight": {
       "type": "string",
       "default": "github",
       "description": "Tema de resaltado de sintaxis para bloques de codigo."
     },
-
     "tokens": {
       "type": "object",
       "description": "Design tokens. El renderer los emite como variables CSS en :root ANTES de cargar el CSS del theme, de modo que el CSS pueda consumirlos con var(--nombre). Esta es la capa que la UI de personalizacion edita sin tocar una linea de CSS.",
       "additionalProperties": {
-        "type": ["string", "number"]
+        "type": [
+          "string",
+          "number"
+        ]
       }
     },
-
     "tokenSchema": {
       "type": "object",
       "description": "Declara el tipo y la etiqueta de cada token para que la UI genere el formulario sola. Normalmente solo lo define _base; un theme lo extiende si agrega tokens propios.",
       "additionalProperties": {
         "type": "object",
-        "required": ["type", "label"],
+        "required": [
+          "type",
+          "label"
+        ],
         "additionalProperties": false,
         "properties": {
           "type": {
-            "enum": ["color", "font-stack", "length", "number", "text"],
+            "enum": [
+              "color",
+              "font-stack",
+              "length",
+              "number",
+              "text"
+            ],
             "description": "Determina el control que dibuja la UI: color picker, selector de fuente, campo con unidad, etc."
           },
-          "label":       { "type": "string" },
-          "group":       { "type": "string", "description": "Agrupa controles en la UI (ej: paleta, tipografia, portada)." },
-          "description": { "type": "string" }
+          "label": {
+            "$ref": "#/definitions/localized"
+          },
+          "group": {
+            "type": "string",
+            "description": "Agrupa controles en la UI (ej: paleta, tipografia, portada)."
+          },
+          "description": {
+            "$ref": "#/definitions/localized"
+          }
         }
       }
     },
-
     "page": {
       "type": "object",
       "description": "Geometria de pagina. FUENTE UNICA DE VERDAD: el CSS del theme NO debe declarar @page { size } ni @page { margin }; el renderer los pasa a printToPDF.",
@@ -66,93 +97,230 @@
       "properties": {
         "size": {
           "oneOf": [
-            { "enum": ["A4", "A3", "A5", "Letter", "Legal", "Tabloid"] },
+            {
+              "enum": [
+                "A4",
+                "A3",
+                "A5",
+                "Letter",
+                "Legal",
+                "Tabloid"
+              ]
+            },
             {
               "type": "object",
-              "required": ["width", "height"],
+              "required": [
+                "width",
+                "height"
+              ],
               "additionalProperties": false,
               "properties": {
-                "width":  { "type": "string" },
-                "height": { "type": "string" }
+                "width": {
+                  "type": "string"
+                },
+                "height": {
+                  "type": "string"
+                }
               }
             }
           ],
           "default": "A4"
         },
-        "orientation": { "enum": ["portrait", "landscape"], "default": "portrait" },
+        "orientation": {
+          "enum": [
+            "portrait",
+            "landscape"
+          ],
+          "default": "portrait"
+        },
         "margin": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "top":    { "type": "string" },
-            "right":  { "type": "string" },
-            "bottom": { "type": "string" },
-            "left":   { "type": "string" }
+            "top": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            },
+            "bottom": {
+              "type": "string"
+            },
+            "left": {
+              "type": "string"
+            }
           }
         },
-        "printBackground": { "type": "boolean", "default": true },
-        "scale":           { "type": "number", "minimum": 0.1, "maximum": 2 }
+        "printBackground": {
+          "type": "boolean",
+          "default": true
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 2
+        }
       }
     },
-
     "cover": {
       "type": "object",
       "description": "Portada por convencion: no exige markup especial. El primer h1 del documento es el titulo, el parrafo que le sigue es la metadata, y el primer <hr> la cierra con un salto de pagina. Su altura y su aire se controlan con tokens (portada-*), no con CSS.",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": false },
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
         "break": {
-          "enum": ["page", "none"],
+          "enum": [
+            "page",
+            "none"
+          ],
           "default": "page",
           "description": "Si el primer <hr> fuerza salto de pagina."
         }
       }
     },
-
-    "header": { "$ref": "#/definitions/band" },
-    "footer": { "$ref": "#/definitions/band" },
-
+    "header": {
+      "$ref": "#/definitions/band"
+    },
+    "footer": {
+      "$ref": "#/definitions/band"
+    },
     "vars": {
       "type": "object",
       "description": "Cadenas propias del theme, interpolables en header y footer como {{vars.nombre}}. Sirven para sacar del codigo textos como el aviso de confidencialidad.",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "$ref": "#/definitions/localized"
+      }
     },
-
+    "varSchema": {
+      "type": "object",
+      "description": "Declara etiqueta y tipo de cada var para que la UI genere su formulario sola, igual que tokenSchema hace con los tokens. Una var sin entrada aca sigue funcionando en el pie, pero no se le ofrece al usuario para editar.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "type",
+          "label"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "color",
+              "font-stack",
+              "length",
+              "number",
+              "text"
+            ],
+            "description": "Determina el control que dibuja la UI: color picker, selector de fuente, campo con unidad, etc."
+          },
+          "label": {
+            "$ref": "#/definitions/localized"
+          },
+          "group": {
+            "type": "string",
+            "description": "Agrupa controles en la UI (ej: paleta, tipografia, portada)."
+          },
+          "description": {
+            "$ref": "#/definitions/localized"
+          }
+        }
+      }
+    },
     "fonts": {
       "type": "array",
       "description": "Fuentes empaquetadas dentro del theme. Se emiten como @font-face con la fuente embebida, de modo que el PDF no dependa de que la tipografia este instalada en la maquina.",
       "items": {
         "type": "object",
-        "required": ["family", "files"],
+        "required": [
+          "family",
+          "files"
+        ],
         "additionalProperties": false,
         "properties": {
-          "family": { "type": "string" },
-          "weight": { "type": ["string", "number"], "default": "normal" },
-          "style":  { "enum": ["normal", "italic"], "default": "normal" },
-          "files":  { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          "family": {
+            "type": "string"
+          },
+          "weight": {
+            "type": [
+              "string",
+              "number"
+            ],
+            "default": "normal"
+          },
+          "style": {
+            "enum": [
+              "normal",
+              "italic"
+            ],
+            "default": "normal"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          }
         }
       }
     }
   },
-
   "definitions": {
     "band": {
       "type": "object",
       "description": "Banda de encabezado o pie. Se compone por ranuras (left/center/right); el renderer genera el HTML e INYECTA el margen lateral por su cuenta, para que nunca haya que sincronizarlo a mano con page.margin.",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "default": false },
-        "left":    { "$ref": "#/definitions/slot" },
-        "center":  { "$ref": "#/definitions/slot" },
-        "right":   { "$ref": "#/definitions/slot" },
-        "rule":    { "type": "boolean", "default": false, "description": "Filete de separacion contra el cuerpo." },
-        "fontSize":{ "type": "string", "default": "7pt" },
-        "color":   { "type": "string" }
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "left": {
+          "$ref": "#/definitions/slot"
+        },
+        "center": {
+          "$ref": "#/definitions/slot"
+        },
+        "right": {
+          "$ref": "#/definitions/slot"
+        },
+        "rule": {
+          "type": "boolean",
+          "default": false,
+          "description": "Filete de separacion contra el cuerpo."
+        },
+        "fontSize": {
+          "type": "string",
+          "default": "7pt"
+        },
+        "color": {
+          "type": "string"
+        }
       }
     },
     "slot": {
-      "type": "string",
-      "description": "Texto con interpolacion. Placeholders: {{page}}, {{pages}}, {{title}}, {{date}}, {{file}} y {{vars.CUALQUIERA}}."
+      "description": "Texto con interpolacion, localizable. Placeholders: {{page}}, {{pages}}, {{title}}, {{date}}, {{file}}, {{vars.CUALQUIERA}} y {{fm.CAMPO}} del frontmatter.",
+      "$ref": "#/definitions/localized"
+    },
+    "localized": {
+      "description": "Texto que se muestra al usuario. Puede ser una cadena suelta o un objeto por idioma: {\"en\": \"...\", \"es\": \"...\"}. Se resuelve contra el idioma de Obsidian (o --idioma en el CLI) con esta cadena de respaldo: coincidencia exacta -> idioma base (es-419 cae en es) -> en -> la primera que haya. Una cadena suelta se usa tal cual en todos los idiomas.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z]{2}(-[A-Za-z0-9]+)?$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      ]
     }
   }
 }

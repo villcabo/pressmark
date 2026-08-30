@@ -91,20 +91,20 @@ type Cover struct {
 // Band es un encabezado o un pie. Se compone por ranuras; el margen lateral lo
 // inyecta el renderer, para que nunca haya que sincronizarlo con Page.Margin.
 type Band struct {
-	Enabled  *bool   `json:"enabled,omitempty"`
-	Left     *string `json:"left,omitempty"`
-	Center   *string `json:"center,omitempty"`
-	Right    *string `json:"right,omitempty"`
-	Rule     *bool   `json:"rule,omitempty"`
-	FontSize *string `json:"fontSize,omitempty"`
-	Color    *string `json:"color,omitempty"`
+	Enabled  *bool      `json:"enabled,omitempty"`
+	Left     *Localized `json:"left,omitempty"`
+	Center   *Localized `json:"center,omitempty"`
+	Right    *Localized `json:"right,omitempty"`
+	Rule     *bool      `json:"rule,omitempty"`
+	FontSize *string    `json:"fontSize,omitempty"`
+	Color    *string    `json:"color,omitempty"`
 }
 
 type TokenDef struct {
-	Type        string `json:"type"`
-	Label       string `json:"label"`
-	Group       string `json:"group,omitempty"`
-	Description string `json:"description,omitempty"`
+	Type        string    `json:"type"`
+	Label       Localized `json:"label"`
+	Group       string    `json:"group,omitempty"`
+	Description Localized `json:"description,omitempty"`
 }
 
 type Font struct {
@@ -115,21 +115,22 @@ type Font struct {
 }
 
 type Theme struct {
-	ID          string              `json:"id"`
-	Name        string              `json:"name"`
-	Description string              `json:"description,omitempty"`
-	Version     string              `json:"version"`
-	Author      string              `json:"author,omitempty"`
-	Extends     json.RawMessage     `json:"extends,omitempty"`
-	Highlight   *string             `json:"highlight,omitempty"`
-	Tokens      map[string]Value    `json:"tokens,omitempty"`
-	TokenSchema map[string]TokenDef `json:"tokenSchema,omitempty"`
-	Page        *Page               `json:"page,omitempty"`
-	Cover       *Cover              `json:"cover,omitempty"`
-	Header      *Band               `json:"header,omitempty"`
-	Footer      *Band               `json:"footer,omitempty"`
-	Vars        map[string]string   `json:"vars,omitempty"`
-	Fonts       []Font              `json:"fonts,omitempty"`
+	ID          string               `json:"id"`
+	Name        Localized            `json:"name"`
+	Description Localized            `json:"description,omitempty"`
+	Version     string               `json:"version"`
+	Author      string               `json:"author,omitempty"`
+	Extends     json.RawMessage      `json:"extends,omitempty"`
+	Highlight   *string              `json:"highlight,omitempty"`
+	Tokens      map[string]Value     `json:"tokens,omitempty"`
+	TokenSchema map[string]TokenDef  `json:"tokenSchema,omitempty"`
+	Page        *Page                `json:"page,omitempty"`
+	Cover       *Cover               `json:"cover,omitempty"`
+	Header      *Band                `json:"header,omitempty"`
+	Footer      *Band                `json:"footer,omitempty"`
+	Vars        map[string]Localized `json:"vars,omitempty"`
+	VarSchema   map[string]TokenDef  `json:"varSchema,omitempty"`
+	Fonts       []Font               `json:"fonts,omitempty"`
 }
 
 // parent devuelve el id del padre. Ausente implica "_base"; null explicito, nada.
@@ -214,6 +215,7 @@ func merge(dst, src *Theme) {
 	dst.Tokens = mergeMap(dst.Tokens, src.Tokens)
 	dst.Vars = mergeMap(dst.Vars, src.Vars)
 	dst.TokenSchema = mergeMap(dst.TokenSchema, src.TokenSchema)
+	dst.VarSchema = mergeMap(dst.VarSchema, src.VarSchema)
 	if len(src.Fonts) > 0 {
 		dst.Fonts = append(dst.Fonts, src.Fonts...)
 	}

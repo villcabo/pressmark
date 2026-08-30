@@ -34,20 +34,28 @@ const PULGADAS_POR: Record<string, number> = {
   px: 96,
 };
 
-/** printToPDF solo entiende pulgadas. */
+/**
+ * printToPDF solo entiende pulgadas.
+ *
+ * Valida el numero con una expresion regular y NO con parseFloat: parseFloat
+ * corta en el primer caracter que no entiende, asi que "18 pulgadas" le da 18 y
+ * se traga un valor invalido. El conversor de Go lo rechaza, y los dos tienen
+ * que coincidir o el mismo theme pack da margenes distintos en cada lado.
+ */
+const NUMERO = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+
 export function aPulgadas(v: string | undefined, porDefecto = 0): number {
   if (!v) return porDefecto;
   const s = v.trim().toLowerCase();
+  const numero = (txt: string, por: number): number => {
+    const t = txt.trim();
+    if (!NUMERO.test(t)) throw new Error(`longitud invalida: "${v}"`);
+    return Number.parseFloat(t) / por;
+  };
   for (const [u, por] of Object.entries(PULGADAS_POR)) {
-    if (s.endsWith(u)) {
-      const n = Number.parseFloat(s.slice(0, -u.length));
-      if (Number.isNaN(n)) throw new Error(`longitud invalida: "${v}"`);
-      return n / por;
-    }
+    if (s.endsWith(u)) return numero(s.slice(0, -u.length), por);
   }
-  const n = Number.parseFloat(s);
-  if (Number.isNaN(n)) throw new Error(`longitud invalida: "${v}"`);
-  return n / 96;
+  return numero(s, 96); // numero pelado = px
 }
 
 const PAPELES: Record<string, [number, number]> = {
@@ -98,6 +106,18 @@ export function opcionesDe(t: Resolved, header: string, footer: string): PrintOp
  * de pasarlo como data: URL. No es capricho: una data: URL tiene limite de
  * tamano y un documento con imagenes embebidas lo pasa sin esfuerzo.
  */
+/**
+ * Copia los bytes REALES del resultado.
+ *
+ * printToPDF devuelve un Buffer de Node, y `buffer.buffer` no devuelve sus
+ * bytes: devuelve el pool entero del que Node lo saco, que suele ser mucho mas
+ * grande. Escribir eso produce un PDF corrupto. Hay que recortar por
+ * byteOffset/byteLength.
+ */
+export function bytesDe(b: Uint8Array): ArrayBuffer {
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+}
+
 export async function generar(html: string, opts: PrintOptions): Promise<Uint8Array> {
   // require dinamico: electron no existe en mobile, y el bundler no debe
   // resolverlo en tiempo de build.
@@ -121,7 +141,9 @@ export async function generar(html: string, opts: PrintOptions): Promise<Uint8Ar
       landscape: opts.landscape,
       printBackground: opts.printBackground,
       pageSize: { width: opts.paperWidth, height: opts.paperHeight },
-      margins: { ...opts.margins, marginType: "custom" },
+      // Sin marginType: esa propiedad es de contents.print(), NO de
+      // printToPDF. Aca los cuatro lados van en PULGADAS y nada mas.
+      margins: opts.margins,
       displayHeaderFooter: opts.displayHeaderFooter,
       headerTemplate: opts.headerTemplate,
       footerTemplate: opts.footerTemplate,
@@ -147,14 +169,36 @@ interface Remote {
   };
 }
 
+/**
+ * Obtiene @electron/remote.
+ *
+ * Obsidian lo trae bundleado e inicializado (verificado en app.asar), pero el
+ * modulo se habilita POR webContents. Si no estuviera habilitado para el
+ * renderer del plugin, el error de Electron lo dice con esas palabras — por eso
+ * se distingue ese caso: sin el mensaje preciso, el fallo es indiagnosticable.
+ */
 function requireRemote(): Remote {
   const req = (globalThis as { require?: (m: string) => unknown }).require;
-  if (!req) throw new Error("no hay acceso a Electron: el plugin es solo de escritorio");
-  try {
-    return req("@electron/remote") as Remote;
-  } catch {
-    const e = req("electron") as { remote?: Remote };
-    if (!e.remote) throw new Error("no encontre @electron/remote ni electron.remote");
-    return e.remote;
+  if (!req) {
+    throw new Error(
+      "no hay acceso a require(): el plugin necesita el escritorio (isDesktopOnly)",
+    );
   }
+  let mod: Remote | undefined;
+  try {
+    mod = req("@electron/remote") as Remote;
+  } catch (e) {
+    try {
+      mod = (req("electron") as { remote?: Remote }).remote;
+    } catch {
+      /* se reporta abajo con el error original */
+    }
+    if (!mod) {
+      throw new Error(`no pude cargar @electron/remote: ${(e as Error).message}`);
+    }
+  }
+  if (!mod?.BrowserWindow) {
+    throw new Error("@electron/remote cargo pero no expone BrowserWindow");
+  }
+  return mod;
 }

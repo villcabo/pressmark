@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "_base",
-  "name": "Base",
-  "description": "Cimiento comun de todos los theme packs. No se usa suelto: define el contrato de tokens y los estilos que el resto hereda. Su paleta es el verde de contabilidad — el papel de barras verdes de los listados de conciliacion. Viene del material del sujeto, no de una paleta generica.",
+  "name": {
+    "en": "Base",
+    "es": "Base"
+  },
+  "description": {
+    "en": "Shared foundation for every theme pack. Not used on its own: it defines the token contract and the styles the rest inherit. Its palette is accounting green, the green-bar paper of reconciliation listings. It comes from the subject matter, not from a generic palette.",
+    "es": "Cimiento común de todos los theme packs. No se usa suelto: define el contrato de tokens y los estilos que el resto hereda. Su paleta es el verde de contabilidad, el papel de barras verdes de los listados de conciliación. Viene del material del sujeto, no de una paleta genérica."
+  },
   "version": "1.0.0",
   "extends": null,
   "highlight": "github",
@@ -25,77 +31,146 @@
     "acento": {
       "type": "color",
       "group": "paleta",
-      "label": "Acento",
-      "description": "Titulos, reglas de tabla y enfasis. Es el color con el que se identifica el documento. En _base es el verde de contabilidad."
+      "label": {
+        "en": "Accent",
+        "es": "Acento"
+      },
+      "description": {
+        "en": "Headings, table rules and emphasis. The color the document is identified by. In _base it is accounting green.",
+        "es": "Títulos, reglas de tabla y énfasis. Es el color con el que se identifica el documento. En _base es el verde de contabilidad."
+      }
     },
     "acento-tenue": {
       "type": "color",
       "group": "paleta",
-      "label": "Acento tenue",
-      "description": "Fondo de citas y avisos. Debe ser casi blanco: si pesa, el documento parece un formulario."
+      "label": {
+        "en": "Soft accent",
+        "es": "Acento tenue"
+      },
+      "description": {
+        "en": "Background for quotes and notices. Keep it near white: if it weighs, the document looks like a form.",
+        "es": "Fondo de citas y avisos. Debe ser casi blanco: si pesa, el documento parece un formulario."
+      }
     },
     "acento-medio": {
       "type": "color",
       "group": "paleta",
-      "label": "Acento medio",
-      "description": "Bordes y separadores derivados del acento."
+      "label": {
+        "en": "Mid accent",
+        "es": "Acento medio"
+      },
+      "description": {
+        "en": "Borders and separators derived from the accent.",
+        "es": "Bordes y separadores derivados del acento."
+      }
     },
     "tinta": {
       "type": "color",
       "group": "paleta",
-      "label": "Tinta",
-      "description": "Color del texto. Nunca negro puro: en papel el negro absoluto endurece la lectura."
+      "label": {
+        "en": "Ink",
+        "es": "Tinta"
+      },
+      "description": {
+        "en": "Body text color. Never pure black: on paper absolute black hardens reading.",
+        "es": "Color del texto. Nunca negro puro: en papel el negro absoluto endurece la lectura."
+      }
     },
     "tenue": {
       "type": "color",
       "group": "paleta",
-      "label": "Texto tenue",
-      "description": "Metadata, pies de tabla, texto secundario."
+      "label": {
+        "en": "Muted text",
+        "es": "Texto tenue"
+      },
+      "description": {
+        "en": "Metadata, table footers, secondary text.",
+        "es": "Metadata, pies de tabla, texto secundario."
+      }
     },
     "regla": {
       "type": "color",
       "group": "paleta",
-      "label": "Reglas",
-      "description": "Lineas finas de separacion."
+      "label": {
+        "en": "Rules",
+        "es": "Reglas"
+      },
+      "description": {
+        "en": "Thin separator lines.",
+        "es": "Líneas finas de separación."
+      }
     },
     "papel-codigo": {
       "type": "color",
       "group": "paleta",
-      "label": "Fondo de codigo"
+      "label": {
+        "en": "Code background",
+        "es": "Fondo de código"
+      }
     },
     "aviso": {
       "type": "color",
       "group": "paleta",
-      "label": "Aviso",
-      "description": "Ocre quemado, no naranja de alerta web: el documento es impreso, no una interfaz."
+      "label": {
+        "en": "Notice",
+        "es": "Aviso"
+      },
+      "description": {
+        "en": "Burnt ochre, not web-alert orange: this is print, not an interface.",
+        "es": "Ocre quemado, no naranja de alerta web: el documento es impreso, no una interfaz."
+      }
     },
     "aviso-fondo": {
       "type": "color",
       "group": "paleta",
-      "label": "Fondo de aviso"
+      "label": {
+        "en": "Notice background",
+        "es": "Fondo de aviso"
+      }
     },
     "fuente": {
       "type": "font-stack",
       "group": "tipografia",
-      "label": "Texto",
-      "description": "Pila completa con alternativas: el PDF se genera en maquinas donde la primera puede no estar."
+      "label": {
+        "en": "Body",
+        "es": "Texto"
+      },
+      "description": {
+        "en": "Full stack with fallbacks: the PDF is generated on machines where the first font may be missing.",
+        "es": "Pila completa con alternativas: el PDF se genera en máquinas donde la primera puede no estar."
+      }
     },
     "fuente-mono": {
       "type": "font-stack",
       "group": "tipografia",
-      "label": "Monoespaciada"
+      "label": {
+        "en": "Monospace",
+        "es": "Monoespaciada"
+      }
     },
     "fuente-titulo": {
       "type": "font-stack",
       "group": "tipografia",
-      "label": "Titulos",
-      "description": "Por defecto hereda de la fuente de texto."
+      "label": {
+        "en": "Headings",
+        "es": "Títulos"
+      },
+      "description": {
+        "en": "Falls back to the body font.",
+        "es": "Por defecto hereda de la fuente de texto."
+      }
     },
     "portada-offset": {
       "type": "length",
       "group": "portada",
-      "label": "Alto de portada",
-      "description": "Cuanto baja el titulo desde el borde superior. Con esto se pasa de portada entera a media carilla sin tocar CSS."
+      "label": {
+        "en": "Cover height",
+        "es": "Alto de portada"
+      },
+      "description": {
+        "en": "How far the title drops from the top edge. This turns a full cover into a half-page one without touching CSS.",
+        "es": "Cuánto baja el título desde el borde superior. Con esto se pasa de portada entera a media carilla sin tocar CSS."
+      }
     }
   },
   "page": {

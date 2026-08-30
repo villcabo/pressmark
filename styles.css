@@ -1,0 +1,89 @@
+/* Modal de exportacion de Pressmark */
+
+.pressmark-modal { width: min(1040px, 94vw); }
+
+.pressmark-modal .pressmark-ruta {
+  margin: -0.4em 0 1em;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  word-break: break-all;
+}
+
+.pressmark-cols {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) minmax(260px, 0.9fr);
+  gap: 1.4em;
+  align-items: start;
+}
+
+/* En ventanas angostas la vista previa va abajo, no apretada al costado. */
+@media (max-width: 820px) {
+  .pressmark-cols { grid-template-columns: 1fr; }
+}
+
+.pressmark-form .setting-item { padding: 0.5em 0; border: none; }
+
+.pressmark-vista { position: sticky; top: 0; }
+
+/* El lienzo recorta y da scroll; adentro va la carilla a escala real. */
+.pressmark-lienzo {
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: var(--background-secondary);
+  box-shadow: inset 0 1px 4px rgb(0 0 0 / 10%);
+}
+
+/* Se dibuja al tamano REAL del papel y se achica con transform. Achicar el
+   iframe en vez de escalarlo cambiaria el ancho de columna y la vista previa
+   dejaria de predecir donde cortan las lineas. */
+.pressmark-escala {
+  position: relative;
+  transform-origin: top left;
+  --pm-escala: 1;
+}
+
+.pressmark-preview {
+  display: block;
+  border: 0;
+  background: #fff;
+  width: 100%;
+}
+
+/* Donde Chromium va a cortar. Aproximado, pero suficiente para ver si un
+   titulo o una tabla quedan a caballo entre dos carillas. */
+.pressmark-cortes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pressmark-corte {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Contra-escalado: el contenedor esta a scale(--pm-escala) y sin esto la
+     linea se afinaria hasta desaparecer. */
+  border-top: calc(1.5px / var(--pm-escala)) dashed rgb(220 38 38 / 60%);
+}
+
+.pressmark-corte span {
+  position: absolute;
+  right: calc(8px / var(--pm-escala));
+  top: calc(5px / var(--pm-escala));
+  padding: calc(2px / var(--pm-escala)) calc(7px / var(--pm-escala));
+  border-radius: calc(3px / var(--pm-escala));
+  background: rgb(220 38 38 / 85%);
+  color: #fff;
+  font-family: var(--font-interface);
+  font-size: calc(11px / var(--pm-escala));
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pressmark-info {
+  margin-top: 0.6em;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.5;
+}

@@ -11,7 +11,11 @@
  * agregalo ahi PRIMERO y arregla las dos implementaciones.
  */
 
+import type { Localized } from "./locale";
+
 export const BASE_ID = "_base";
+
+export type { Localized };
 
 export type Value = string;
 
@@ -39,9 +43,9 @@ export interface Cover {
 
 export interface Band {
   enabled?: boolean;
-  left?: string;
-  center?: string;
-  right?: string;
+  left?: Localized;
+  center?: Localized;
+  right?: Localized;
   rule?: boolean;
   fontSize?: string;
   color?: string;
@@ -49,15 +53,15 @@ export interface Band {
 
 export interface TokenDef {
   type: "color" | "font-stack" | "length" | "number" | "text";
-  label: string;
+  label: Localized;
   group?: string;
-  description?: string;
+  description?: Localized;
 }
 
 export interface Theme {
   id: string;
-  name: string;
-  description?: string;
+  name: Localized;
+  description?: Localized;
   version: string;
   author?: string;
   extends?: string | null;
@@ -68,7 +72,8 @@ export interface Theme {
   cover?: Cover;
   header?: Band;
   footer?: Band;
-  vars?: Record<string, string>;
+  vars?: Record<string, Localized>;
+  varSchema?: Record<string, TokenDef>;
 }
 
 export interface Resolved extends Theme {
@@ -161,6 +166,7 @@ function mezclar(dst: Resolved, src: Theme): void {
   dst.tokens = mezclarMapa(dst.tokens, src.tokens);
   dst.vars = mezclarMapa(dst.vars, src.vars);
   dst.tokenSchema = mezclarMapa(dst.tokenSchema, src.tokenSchema);
+  dst.varSchema = mezclarMapa(dst.varSchema, src.varSchema);
   dst.page = mezclarPage(dst.page, src.page);
   dst.cover = mezclarPlano(dst.cover, src.cover);
   dst.header = mezclarPlano(dst.header, src.header);

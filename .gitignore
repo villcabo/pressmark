@@ -1,7 +1,7 @@
 # Build
 /cli/internal/themes/packs/
 /dist/
-/plugin/main.js
+/main.js
 /plugin/node_modules/
 /node_modules/
 

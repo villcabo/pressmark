@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "ejecutivo",
-  "name": "Ejecutivo",
-  "description": "Titulos en serif, azul de tinta, mucho aire. Para direccion y comite.",
+  "name": {
+    "en": "Executive",
+    "es": "Ejecutivo"
+  },
+  "description": {
+    "en": "Serif headings, ink blue, plenty of air. For leadership and steering committees.",
+    "es": "Títulos en serif, azul de tinta, mucho aire. Para dirección y comité."
+  },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
@@ -33,12 +39,32 @@
   "footer": {
     "enabled": true,
     "left": "{{vars.confidencialidad}}",
-    "right": "Pagina {{page}} de {{pages}}",
+    "right": {
+      "en": "Page {{page}} of {{pages}}",
+      "es": "Página {{page}} de {{pages}}"
+    },
     "rule": true,
     "fontSize": "7pt",
     "color": "#7c8b99"
   },
   "vars": {
-    "confidencialidad": "Confidencial · uso interno"
+    "confidencialidad": {
+      "en": "Confidential · internal use",
+      "es": "Confidencial · uso interno"
+    }
+  },
+  "varSchema": {
+    "confidencialidad": {
+      "type": "text",
+      "label": {
+        "en": "Confidentiality notice",
+        "es": "Aviso de confidencialidad"
+      },
+      "group": "pie",
+      "description": {
+        "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
+        "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."
+      }
+    }
   }
 }

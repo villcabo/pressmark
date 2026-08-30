@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "informe",
-  "name": "Informe",
-  "description": "Documento formal con portada y margenes amplios. El canonico.",
+  "name": {
+    "en": "Report",
+    "es": "Informe"
+  },
+  "description": {
+    "en": "Formal document with a cover page and generous margins. The canonical one.",
+    "es": "Documento formal con portada y márgenes amplios. El canónico."
+  },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
@@ -25,12 +31,32 @@
   "footer": {
     "enabled": true,
     "left": "{{vars.confidencialidad}}",
-    "right": "Pagina {{page}} de {{pages}}",
+    "right": {
+      "en": "Page {{page}} of {{pages}}",
+      "es": "Página {{page}} de {{pages}}"
+    },
     "rule": true,
     "fontSize": "7pt",
     "color": "#8a9099"
   },
   "vars": {
-    "confidencialidad": "Confidencial · uso interno"
+    "confidencialidad": {
+      "en": "Confidential · internal use",
+      "es": "Confidencial · uso interno"
+    }
+  },
+  "varSchema": {
+    "confidencialidad": {
+      "type": "text",
+      "label": {
+        "en": "Confidentiality notice",
+        "es": "Aviso de confidencialidad"
+      },
+      "group": "pie",
+      "description": {
+        "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
+        "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."
+      }
+    }
   }
 }

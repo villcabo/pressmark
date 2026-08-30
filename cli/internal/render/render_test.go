@@ -1,7 +1,9 @@
 package render
 
 import (
+	"encoding/json"
 	"math"
+	"os"
 	"strings"
 	"testing"
 
@@ -75,22 +77,26 @@ func TestTokensCSSEsEstable(t *testing.T) {
 
 func ptr[T any](v T) *T { return &v }
 
+// loc arma un texto localizable a partir de una cadena suelta.
+func loc(v string) *theme.Localized { return &theme.Localized{Plano: v} }
+
 func TestBandHTML(t *testing.T) {
 	m := &theme.Margin{Left: ptr("19mm"), Right: ptr("21mm")}
 	vars := map[string]string{"aviso": "Confidencial & interno"}
+	const es = "es"
 
 	t.Run("deshabilitada devuelve span vacio", func(t *testing.T) {
-		if got := BandHTML(nil, m, vars, "T"); got != "<span></span>" {
+		if got := BandHTML(nil, m, vars, "T", es); got != "<span></span>" {
 			t.Errorf("obtuvo %q", got)
 		}
-		if got := BandHTML(&theme.Band{Enabled: ptr(false)}, m, vars, "T"); got != "<span></span>" {
+		if got := BandHTML(&theme.Band{Enabled: ptr(false)}, m, vars, "T", es); got != "<span></span>" {
 			t.Errorf("obtuvo %q", got)
 		}
 	})
 
 	t.Run("inyecta el margen del theme", func(t *testing.T) {
-		b := &theme.Band{Enabled: ptr(true), Left: ptr("{{vars.aviso}}"), Right: ptr("{{page}}/{{pages}}")}
-		got := BandHTML(b, m, vars, "T")
+		b := &theme.Band{Enabled: ptr(true), Left: loc("{{vars.aviso}}"), Right: loc("{{page}}/{{pages}}")}
+		got := BandHTML(b, m, vars, "T", es)
 		// Este es el punto de todo: el padding sale de page.margin, no escrito
 		// a mano. En el formato viejo quedo 1mm corrido del cuerpo.
 		if !strings.Contains(got, "padding:0 21mm 0 19mm") {
@@ -111,8 +117,8 @@ func TestBandHTML(t *testing.T) {
 	})
 
 	t.Run("sin margen no revienta", func(t *testing.T) {
-		b := &theme.Band{Enabled: ptr(true), Center: ptr("x")}
-		if got := BandHTML(b, nil, nil, ""); !strings.Contains(got, "padding:0 0 0 0") {
+		b := &theme.Band{Enabled: ptr(true), Center: loc("x")}
+		if got := BandHTML(b, nil, nil, "", es); !strings.Contains(got, "padding:0 0 0 0") {
 			t.Errorf("obtuvo %q", got)
 		}
 	})
@@ -152,5 +158,82 @@ func TestHTMLResetDeBody(t *testing.T) {
 	}
 	if !strings.Contains(string(doc), `<article class="`+Wrapper+`">`) {
 		t.Error("falta el envoltorio del contrato de estructura")
+	}
+}
+
+func TestSplitFrontmatter(t *testing.T) {
+	// Los casos son COMPARTIDOS con el cargador de TypeScript del plugin:
+	// testdata/conformance/frontmatter.json. La logica vive dos veces y este
+	// fixture es la red que evita que derive.
+	raw, err := os.ReadFile("../../../testdata/conformance/frontmatter.json")
+	if err != nil {
+		t.Fatalf("no pude leer los casos: %v", err)
+	}
+	var casos []struct {
+		Name   string            `json:"name"`
+		Why    string            `json:"why"`
+		In     string            `json:"in"`
+		Campos map[string]string `json:"campos"`
+		Cuerpo string            `json:"cuerpo"`
+	}
+	if err := json.Unmarshal(raw, &casos); err != nil {
+		t.Fatalf("frontmatter.json invalido: %v", err)
+	}
+	if len(casos) == 0 {
+		t.Fatal("frontmatter.json esta vacio")
+	}
+
+	for _, c := range casos {
+		t.Run(c.Name, func(t *testing.T) {
+			campos, cuerpo := SplitFrontmatter([]byte(c.In))
+			if string(cuerpo) != c.Cuerpo {
+				t.Errorf("%s | cuerpo: quiere %q, obtuvo %q", c.Why, c.Cuerpo, cuerpo)
+			}
+			if len(campos) != len(c.Campos) {
+				t.Fatalf("%s | campos: quiere %v, obtuvo %v", c.Why, c.Campos, campos)
+			}
+			for k, v := range c.Campos {
+				if campos[k] != v {
+					t.Errorf("%s | campo %q: quiere %q, obtuvo %q", c.Why, k, v, campos[k])
+				}
+			}
+		})
+	}
+}
+
+func TestTitleFrom(t *testing.T) {
+	if got := TitleFrom(map[string]string{"title": "Del frontmatter"}, []byte("# Del h1"), "x"); got != "Del frontmatter" {
+		t.Errorf("obtuvo %q", got)
+	}
+	if got := TitleFrom(nil, []byte("# Del h1"), "x"); got != "Del h1" {
+		t.Errorf("obtuvo %q", got)
+	}
+	if got := TitleFrom(nil, []byte("sin titulo"), "del archivo"); got != "del archivo" {
+		t.Errorf("obtuvo %q", got)
+	}
+}
+
+func TestMergeVars(t *testing.T) {
+	vars := map[string]theme.Localized{"a": {Plano: "1"}}
+	out := MergeVars(vars, map[string]string{"sistema": "PGW"}, "es")
+	if out["a"] != "1" || out["fm.sistema"] != "PGW" {
+		t.Errorf("obtuvo %v", out)
+	}
+	if got := MergeVars(vars, nil, "es"); got["a"] != "1" {
+		t.Errorf("obtuvo %v", got)
+	}
+}
+
+// La banda tiene que resolver el idioma, no imprimir el objeto crudo.
+func TestBandHTMLLocalizada(t *testing.T) {
+	b := &theme.Band{
+		Enabled: ptr(true),
+		Right:   &theme.Localized{Por: map[string]string{"en": "Page {{page}}", "es": "Pagina {{page}}"}},
+	}
+	for locale, quiere := range map[string]string{"es": "Pagina", "en": "Page", "ja": "Page", "es-419": "Pagina"} {
+		got := BandHTML(b, nil, nil, "", locale)
+		if !strings.Contains(got, quiere) {
+			t.Errorf("locale %q: quiere %q en\n%s", locale, quiere, got)
+		}
 	}
 }

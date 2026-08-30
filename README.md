@@ -1,151 +1,116 @@
-# pressmark
+# Pressmark
 
-Markdown a PDF con formatos definidos y personalizables, desde la terminal
-**y** desde Obsidian — con el mismo resultado.
+Export Obsidian notes to PDF using **portable theme packs** — formats you can
+version in git, share with your team, and reuse from the command line.
 
-El motor de maquetado es Chromium, en los dos casos. Lo que cambia es quién lo
-maneja. Lo que **no** cambia es el theme pack.
+The layout engine is Chromium in both cases. What changes is who drives it.
+What does **not** change is the theme pack.
 
-```
-themes/                    el producto: CSS + tokens + geometria de pagina
-testdata/conformance/      la semantica de herencia, que corren los dos
-  ├─ cli/                  binario Go: goldmark + chromedp + Chrome del sistema
-  └─ plugin/               Obsidian (desktop): renderer propio + printToPDF
-```
+> The same theme pack produces the same PDF from your vault and from your
+> terminal.
 
-## Por que existe
+## Why another PDF exporter
 
-Hay decenas de plugins que exportan PDF desde Obsidian. Ninguno tiene CLI, y
-ninguno tiene un formato de tema portable que se versione en git y se comparta
-con un equipo. Ese es el punto: **el mismo theme pack produce el mismo PDF en
-los dos lados.**
+There are plenty of PDF exporters for Obsidian. None of them has a portable
+format: a folder with a stylesheet and a JSON file that you commit to a repo,
+review in a pull request, and hand to a colleague so their documents come out
+looking exactly like yours.
+
+That format is the product. The plugin is how you use it inside Obsidian; the
+CLI is how you use it everywhere else.
+
+## Features
+
+- **Export dialog with a live preview** at the real paper proportion, with
+  simulated margins and dashed marks where each page will break.
+- **Six built-in formats**, from a dense technical spec to an executive report.
+- **Customization UI that builds itself** from the theme pack's schema. Change
+  colors, fonts, cover height and footer text without writing a line of CSS.
+- **Mermaid diagrams** rendered as vector graphics, using the format's palette.
+- **Cover pages by convention** — no special markup. Your first heading, the
+  paragraph or table that follows it, and the first `---`.
+- **Multilingual**: the interface and the document text follow Obsidian's
+  language. English and Spanish included.
+- **Your own theme packs**, kept inside the vault at
+  `.obsidian/pressmark/themes/`.
+
+## Built-in formats
+
+| Format | Cover | Made for |
+| ------ | ----- | -------- |
+| `informe` | full page | Formal reports. The canonical one. |
+| `nota` | none | Diagnostics and lists. Starts right away. |
+| `ejecutivo` | full page | Leadership and steering committees. |
+| `tecnico` | half page | Specs with a lot of code. Dense. |
+| `minimal` | full page | No color at all. Prints the same in black and white. |
+| `moderno` | full page | Proposals and product documents. |
+
+## Usage
+
+Open a note and click the ribbon icon, or run **Pressmark: Export to PDF** from
+the command palette. Pick a format, check the preview, export.
 
 ## Theme packs
 
-Un theme pack es una carpeta con `theme.json` y `theme.css`. Hay tres niveles
-de personalizacion, con costos muy distintos:
+A theme pack is a folder with `theme.json` and `theme.css`. There are three
+levels of customization, with very different costs:
 
-| Nivel | Que tocas | Para quien |
-| ----- | --------- | ---------- |
-| 1 | `tokens` en `theme.json` — 13 colores y fuentes | La mayoria. Es un formulario en el plugin. |
-| 2 | + `page`, `cover`, `footer` | Quien necesita su membrete y sus margenes. |
-| 3 | + `theme.css` propio, con `extends` | Quien sabe CSS. |
+| Level | What you touch | Who it is for |
+| ----- | -------------- | ------------- |
+| 1 | `tokens` in `theme.json` — colors and fonts | Most people. It is a form in the settings tab. |
+| 2 | `page`, `cover`, `footer` | Anyone who needs their own margins and footer. |
+| 3 | Your own `theme.css`, with `extends` | Anyone who knows CSS. |
 
-El formulario del plugin **se genera solo** a partir de `tokenSchema` en
-`themes/_base/theme.json`. Agregar un token nuevo hace aparecer su control sin
-tocar la UI.
+Custom packs go in `.obsidian/pressmark/themes/<id>/` inside your vault. A pack
+of your own can inherit from a built-in one: `extends: "_base"` works even
+though `_base` ships inside the plugin.
 
-Ver [`docs/theme-format.md`](docs/theme-format.md) para el formato completo.
+See [`docs/theme-format.md`](docs/theme-format.md) for the full format.
 
-### Los que vienen incluidos
+## Command line
 
-| Theme | Portada | Para que |
-| ----- | ------- | -------- |
-| `informe` | entera | Documento formal. El canonico. |
-| `nota` | no | Diagnosticos y listas. Arranca directo. |
-| `ejecutivo` | entera | Direccion y comite. Serif, mucho aire. |
-| `tecnico` | media carilla | Specs con mucho codigo. Denso. |
-| `minimal` | entera | Sin color. Imprime igual en blanco y negro. |
-| `moderno` | entera | Propuestas y producto. |
-
-## CLI
+The CLI is a single static Go binary. Its only external dependency is an
+installed Chrome — no Node, no Puppeteer, no `mmdc`.
 
 ```bash
-make build                                   # -> dist/pressmark
+make build                                  # -> dist/pressmark
 
-pressmark informe.md                          # PDF al lado del .md
-pressmark informe.md --estilo tecnico         # otro theme
-pressmark reportes/ --estilo nota --carta     # toda una carpeta
-pressmark --listar                            # themes disponibles
+pressmark report.md                         # PDF next to the .md
+pressmark report.md --estilo tecnico        # another format
+pressmark reports/ --estilo nota --carta    # a whole folder
+pressmark --listar                          # available formats
 ```
 
-Una sola dependencia externa: **un Chrome instalado**. Verificado con stubs que
-fallan si algo invoca `node`, `bun`, `npm`, `python3`, `jq`, `mmdc`, `md-to-pdf`
-o `pandoc` — ninguno se dispara.
+## How both sides stay identical
 
-### Mermaid sin `mmdc`
+Not by sharing code — the CLI parses with goldmark and the plugin uses
+Obsidian's own renderer, and it has to be that way: only Obsidian resolves
+wikilinks, embeds, callouts and Dataview blocks. Consistency comes from three
+things:
 
-Los bloques ` ```mermaid ` se renderizan **dentro de la misma pagina** que se
-imprime. mermaid.js viaja embebido en el binario y el render asincrono se espera
-con `awaitPromise` de CDP antes de llamar a `printToPDF`.
+1. **The theme pack**, which is literally the same file.
+2. **An HTML structure contract**: both wrap the document in
+   `<article class="pm-doc">` and guarantee top-level blocks are direct
+   children. The cover CSS depends on it.
+3. **Conformance fixtures** in `testdata/conformance/`, run by *both*
+   implementations. Inheritance, frontmatter and locale resolution are pinned
+   down by shared JSON cases. If the two sides drift, the suite fails.
 
-El script viejo no podia hacer esto y su comentario explicaba por que: "inyectar
-mermaid.js no sirve, Puppeteer imprime sin esperarlo". Era cierto del pipeline
-cerrado de `md-to-pdf`, no de CDP. Manejando Chrome uno mismo no hay carrera.
-
-Los diagramas toman la paleta del theme, asi que no desentonan con el documento.
-
-## Plugin de Obsidian
-
-Desktop only. Obsidian ya *es* Chromium, asi que el plugin no depende del
-binario ni de nada externo: renderiza con el renderer propio de Obsidian —el
-unico que resuelve wikilinks, embeds, callouts y Dataview— y genera el PDF con
-`webContents.printToPDF` de Electron.
-
-```bash
-make plugin      # -> plugin/main.js
-```
-
-Para probarlo, copiar `manifest.json`, `main.js` y `styles.css` (si existe) a
-`<vault>/.obsidian/plugins/pressmark/`.
-
-### Theme packs propios
-
-Van en `<vault>/.obsidian/pressmark/themes/<id>/`. Se leen con la API Vault, no
-hace falta permiso de nada. Un pack propio puede heredar de uno embebido:
-`extends: "_base"` funciona aunque `_base` no este en el vault.
-
-### La UI de personalizacion se genera sola
-
-Los controles salen del `tokenSchema` del theme pack: `color` dibuja un color
-picker, `length` un campo con unidad, `font-stack` un texto. Agregar un token
-con su entrada de schema hace aparecer su control **sin tocar una linea de la
-UI**. Los overrides del usuario pisan tokens, nunca el CSS, asi que
-personalizar no rompe el pack y siempre se puede volver al original.
-
-## Como se garantiza que el PDF salga igual en los dos lados
-
-No compartiendo codigo — el CLI parsea con goldmark y el plugin usa el renderer
-de Obsidian, y tiene que ser asi. Se garantiza con tres cosas:
-
-1. **El theme pack**, que es literalmente el mismo archivo.
-2. **El contrato de estructura HTML**: los dos envuelven en
-   `<article class="pm-doc">` y garantizan que los bloques de primer nivel
-   sean hijos DIRECTOS. El CSS de la portada depende de eso.
-3. **Los fixtures de conformidad** en `testdata/conformance/`: 13 casos que
-   definen la semantica de herencia y que corren **las dos** implementaciones.
-   Si divergen, la suite falla. Ver su
-   [README](testdata/conformance/README.md).
-
-## Estado
-
-| Fase | Que | Estado |
-| ---- | --- | ------ |
-| 0 | Formato de theme pack + migracion de los 6 temas | hecho |
-| 1 | CLI en Go | hecho |
-| 2 | Plugin de Obsidian: exportacion + UI de personalizacion | hecho |
-| 3 | Import/export de packs, watch, fuentes embebidas | pendiente |
-| 4 | Submission al community store | pendiente |
-
-Ver [`MIGRATION.md`](MIGRATION.md) para lo que cambio al migrar, incluido un bug
-de margenes que arrastraban los 6 temas y la medicion que lo resolvio.
-
-## Desarrollo
+## Development
 
 ```bash
 bun install
-bun run validate     # valida los theme packs: esquema + contrato de tokens
-make build           # valida, sincroniza themes y compila el CLI
-make plugin          # compila el plugin de Obsidian
-make test            # tests de Go Y de TypeScript, incluida la conformidad
+make build      # validates theme packs, builds the CLI
+make plugin     # builds the plugin -> main.js
+make install    # installs into a vault (VAULT=... to pick one)
+make test       # Go and TypeScript, conformance included
 ```
 
-### Dependencias embebidas
+## Requirements
 
-- [mermaid](https://github.com/mermaid-js/mermaid) 11.4.1 (MIT), en
-  `cli/internal/mermaid/vendor/`. Se versiona a proposito: el binario no baja
-  nada de la red en tiempo de ejecucion.
+Desktop only. The plugin uses Electron's `printToPDF`, which is not available
+on mobile.
 
-## Licencia
+## License
 
 MIT

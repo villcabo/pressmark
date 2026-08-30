@@ -220,3 +220,39 @@ nav#TOC a { text-decoration: none; border: none; color: var(--tinta); }
   }
   a[href^="#"]::after { content: ""; }
 }
+
+/* ── Metadata de portada en tabla ────────────────────────────────────────
+   Los documentos reales no ponen la metadata de portada en un parrafo: usan
+   una tabla de dos columnas (etiqueta | valor), casi siempre con encabezado
+   vacio. Sin esto hereda el tratamiento de tabla de datos —regla gruesa en el
+   acento, celdas anchas— y la portada parece una planilla.
+
+   La regla superior la pone el tema en su bloque de metadata; aca solo se
+   desarma lo que sobra. */
+
+.pm-doc > h1:first-of-type + table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+}
+
+.pm-doc > h1:first-of-type + table thead { display: none; }
+
+.pm-doc > h1:first-of-type + table th,
+.pm-doc > h1:first-of-type + table td {
+  border: none;
+  background: none;
+  padding: 0.9mm 0;
+  vertical-align: baseline;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* Primera columna: la etiqueta. Angosta y sin competir con el valor. */
+.pm-doc > h1:first-of-type + table td:first-child,
+.pm-doc > h1:first-of-type + table th:first-child {
+  width: 34%;
+  padding-right: 5mm;
+  font-weight: 600;
+  color: var(--tenue);
+}

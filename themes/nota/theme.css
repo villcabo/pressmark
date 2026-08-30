@@ -31,7 +31,8 @@ html { font-size: 10pt; }
   color: var(--acento);
 }
 
-.pm-doc > h1:first-of-type + p {
+.pm-doc > h1:first-of-type + p,
+.pm-doc > h1:first-of-type + table {
   margin: 0 0 1.4em;
   padding-bottom: 0.7em;
   border-bottom: 2pt solid var(--acento);

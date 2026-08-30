@@ -9,11 +9,20 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type PressmarkPlugin from "./main";
 import type { Resolved, TokenDef } from "./theme";
+import { t, idioma } from "./i18n";
+import { resolve } from "./locale";
 
 export interface Ajustes {
   theme: string;
-  /** Overrides del usuario por theme: { [themeId]: { [token]: valor } } */
+  /** Overrides de tokens por theme: { [themeId]: { [token]: valor } } */
   overrides: Record<string, Record<string, string>>;
+  /**
+   * Overrides de vars por theme. Separados de los tokens porque no son lo
+   * mismo: un token es identidad visual, una var es TEXTO que se imprime, y el
+   * frontmatter de una nota puede pisarla. Precedencia final:
+   * frontmatter > este override > el valor del theme pack.
+   */
+  overridesVars: Record<string, Record<string, string>>;
   abrirAlTerminar: boolean;
   carpetaSalida: string;
 }
@@ -21,11 +30,25 @@ export interface Ajustes {
 export const AJUSTES_POR_DEFECTO: Ajustes = {
   theme: "informe",
   overrides: {},
+  overridesVars: {},
   abrirAlTerminar: true,
   carpetaSalida: "",
 };
 
-const ORDEN_GRUPOS = ["paleta", "tipografia", "portada"];
+const ORDEN_GRUPOS = ["pie", "paleta", "tipografia", "portada"];
+
+/**
+ * Los grupos vienen del tokenSchema como identificadores planos ("paleta").
+ * Se traducen los conocidos; uno propio de un theck pack del usuario se muestra
+ * tal cual, que es mejor que esconderlo.
+ */
+function nombreGrupo(g: string): string {
+  const conocidos = ["pie", "paleta", "tipografia", "portada", "otros"] as const;
+  if ((conocidos as readonly string[]).includes(g)) {
+    return t(`grupo.${g}` as Parameters<typeof t>[0]);
+  }
+  return g.charAt(0).toUpperCase() + g.slice(1);
+}
 
 export class PantallaAjustes extends PluginSettingTab {
   constructor(
@@ -39,7 +62,7 @@ export class PantallaAjustes extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl).setName("Exportación").setHeading();
+    new Setting(containerEl).setName(t("set.exportacion")).setHeading();
 
     void this.seccionGeneral(containerEl);
   }
@@ -48,8 +71,8 @@ export class PantallaAjustes extends PluginSettingTab {
     const ids = await this.plugin.themesDisponibles();
 
     new Setting(c)
-      .setName("Theme pack")
-      .setDesc("El formato que se aplica al exportar.")
+      .setName(t("set.themePack"))
+      .setDesc(t("set.themePackDesc"))
       .addDropdown((d) => {
         for (const id of ids) d.addOption(id, id);
         d.setValue(this.plugin.ajustes.theme).onChange(async (v) => {
@@ -60,19 +83,19 @@ export class PantallaAjustes extends PluginSettingTab {
       });
 
     new Setting(c)
-      .setName("Abrir el PDF al terminar")
-      .addToggle((t) =>
-        t.setValue(this.plugin.ajustes.abrirAlTerminar).onChange(async (v) => {
+      .setName(t("set.abrir"))
+      .addToggle((c) =>
+        c.setValue(this.plugin.ajustes.abrirAlTerminar).onChange(async (v) => {
           this.plugin.ajustes.abrirAlTerminar = v;
           await this.plugin.guardarAjustes();
         }),
       );
 
     new Setting(c)
-      .setName("Carpeta de salida")
-      .setDesc("Vacío = junto a la nota.")
-      .addText((t) =>
-        t
+      .setName(t("set.carpeta"))
+      .setDesc(t("set.carpetaDesc"))
+      .addText((c) =>
+        c
           .setPlaceholder("exportados/")
           .setValue(this.plugin.ajustes.carpetaSalida)
           .onChange(async (v) => {
@@ -85,23 +108,33 @@ export class PantallaAjustes extends PluginSettingTab {
     try {
       theme = await this.plugin.cargarTheme(this.plugin.ajustes.theme);
     } catch (e) {
-      new Setting(c).setName("No pude cargar el theme").setDesc(String(e));
+      new Setting(c).setName(t("set.noCarga")).setDesc(String(e));
       return;
     }
-    this.seccionTokens(c, theme);
+    this.seccionEditable(c, theme, "tokens");
+    this.seccionEditable(c, theme, "vars");
   }
 
-  /** Aca es donde el formulario se dibuja solo. */
-  private seccionTokens(c: HTMLElement, theme: Resolved): void {
-    const schema = theme.tokenSchema ?? {};
-    const tokens = theme.tokens ?? {};
-    const nombres = Object.keys(schema).filter((k) => k in tokens);
-
+  /**
+   * Aca es donde el formulario se dibuja solo.
+   *
+   * Sirve para tokens y para vars sin duplicar nada: las dos capas declaran su
+   * esquema igual (tokenSchema / varSchema), asi que el generador es uno solo.
+   */
+  private seccionEditable(c: HTMLElement, theme: Resolved, capa: "tokens" | "vars"): void {
+    const schema = (capa === "tokens" ? theme.tokenSchema : theme.varSchema) ?? {};
+    const valores = ((capa === "tokens" ? theme.tokens : theme.vars) ?? {}) as Record<string, unknown>;
+    const nombres = Object.keys(schema).filter((k) => k in valores);
     if (nombres.length === 0) return;
 
-    new Setting(c).setName("Personalización").setHeading();
+    new Setting(c)
+      .setName(t(capa === "tokens" ? "set.personalizacion" : "set.textos"))
+      .setHeading();
     c.createEl("p", {
-      text: `Estos controles salen del tokenSchema de "${theme.id}". Los cambios se guardan como overrides y no tocan el theme pack.`,
+      text:
+        capa === "tokens"
+          ? t("set.personalizacionDesc", { id: theme.id })
+          : t("set.textosDesc"),
       cls: "setting-item-description",
     });
 
@@ -118,45 +151,52 @@ export class PantallaAjustes extends PluginSettingTab {
     });
 
     for (const g of grupos) {
-      new Setting(c).setName(g[0]!.toUpperCase() + g.slice(1)).setHeading();
+      if (grupos.length > 1) new Setting(c).setName(nombreGrupo(g)).setHeading();
       for (const n of porGrupo.get(g)!) {
-        this.control(c, theme, n, schema[n]!, tokens[n]!);
+        this.control(c, theme, capa, n, schema[n]!, resolve(valores[n] as never, idioma()));
       }
     }
 
     new Setting(c).addButton((b) =>
       b
-        .setButtonText("Restablecer todo")
+        .setButtonText(t("set.restablecer"))
         .setWarning()
         .onClick(async () => {
-          delete this.plugin.ajustes.overrides[theme.id];
+          delete this.mapa(capa)[theme.id];
           await this.plugin.guardarAjustes();
           this.display();
         }),
     );
   }
 
+  private mapa(capa: "tokens" | "vars"): Record<string, Record<string, string>> {
+    return capa === "tokens" ? this.plugin.ajustes.overrides : this.plugin.ajustes.overridesVars;
+  }
+
   private control(
     c: HTMLElement,
     theme: Resolved,
+    capa: "tokens" | "vars",
     nombre: string,
     def: TokenDef,
     valorTheme: string,
   ): void {
-    const overrides = this.plugin.ajustes.overrides[theme.id] ?? {};
+    const overrides = this.mapa(capa)[theme.id] ?? {};
     const actual = overrides[nombre] ?? valorTheme;
     const modificado = nombre in overrides;
 
-    const s = new Setting(c).setName(def.label);
-    if (def.description) s.setDesc(def.description);
+    const s = new Setting(c).setName(resolve(def.label, idioma()));
+    const desc = resolve(def.description, idioma());
+    if (desc) s.setDesc(desc);
     if (modificado) s.nameEl.createSpan({ text: " ·", cls: "mod-warning" });
 
     const guardar = async (v: string) => {
-      const o = this.plugin.ajustes.overrides[theme.id] ?? {};
+      const mapa = this.mapa(capa);
+      const o = mapa[theme.id] ?? {};
       if (v === valorTheme) delete o[nombre];
       else o[nombre] = v;
-      if (Object.keys(o).length === 0) delete this.plugin.ajustes.overrides[theme.id];
-      else this.plugin.ajustes.overrides[theme.id] = o;
+      if (Object.keys(o).length === 0) delete mapa[theme.id];
+      else mapa[theme.id] = o;
       await this.plugin.guardarAjustes();
     };
 
@@ -167,19 +207,19 @@ export class PantallaAjustes extends PluginSettingTab {
         s.addColorPicker((p) => p.setValue(actual).onChange(guardar));
         break;
       case "number":
-        s.addText((t) =>
-          t.setValue(actual).setPlaceholder(valorTheme).onChange(guardar).inputEl.setAttr("type", "number"),
+        s.addText((c) =>
+          c.setValue(actual).setPlaceholder(valorTheme).onChange(guardar).inputEl.setAttr("type", "number"),
         );
         break;
       default:
-        s.addText((t) => t.setValue(actual).setPlaceholder(valorTheme).onChange(guardar));
+        s.addText((c) => c.setValue(actual).setPlaceholder(valorTheme).onChange(guardar));
     }
 
     if (modificado) {
       s.addExtraButton((b) =>
         b
           .setIcon("rotate-ccw")
-          .setTooltip("Volver al valor del theme")
+          .setTooltip(t("set.volverAlTheme"))
           .onClick(() => {
             void guardar(valorTheme).then(() => this.display());
           }),

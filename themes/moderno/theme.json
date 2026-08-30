@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "moderno",
-  "name": "Moderno",
-  "description": "Inter Display, ciruela, esquinas suaves. Propuestas y producto.",
+  "name": {
+    "en": "Modern",
+    "es": "Moderno"
+  },
+  "description": {
+    "en": "Inter Display, plum, soft corners. For proposals and product docs.",
+    "es": "Inter Display, ciruela, esquinas suaves. Para propuestas y producto."
+  },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
@@ -34,12 +40,32 @@
   "footer": {
     "enabled": true,
     "left": "{{vars.confidencialidad}}",
-    "right": "Pagina {{page}} de {{pages}}",
+    "right": {
+      "en": "Page {{page}} of {{pages}}",
+      "es": "Página {{page}} de {{pages}}"
+    },
     "rule": true,
     "fontSize": "7pt",
     "color": "#7d928f"
   },
   "vars": {
-    "confidencialidad": "Confidencial · uso interno"
+    "confidencialidad": {
+      "en": "Confidential · internal use",
+      "es": "Confidencial · uso interno"
+    }
+  },
+  "varSchema": {
+    "confidencialidad": {
+      "type": "text",
+      "label": {
+        "en": "Confidentiality notice",
+        "es": "Aviso de confidencialidad"
+      },
+      "group": "pie",
+      "description": {
+        "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
+        "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."
+      }
+    }
   }
 }

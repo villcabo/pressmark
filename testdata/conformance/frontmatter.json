@@ -1,0 +1,65 @@
+[
+  {
+    "name": "frontmatter normal",
+    "why": "Se separa y no llega al cuerpo. Su --- de apertura NO debe ser el primer <hr> del documento.",
+    "in": "---\ntipo: prueba\nsistema: Pressmark\n---\n\n# Titulo",
+    "campos": { "tipo": "prueba", "sistema": "Pressmark" },
+    "cuerpo": "\n# Titulo"
+  },
+  {
+    "name": "cierre con tres puntos",
+    "why": "YAML admite ... como cierre de documento.",
+    "in": "---\na: 1\n...\ncuerpo",
+    "campos": { "a": "1" },
+    "cuerpo": "cuerpo"
+  },
+  {
+    "name": "lista se aplana",
+    "why": "Una lista solo sirve en un pie si es una linea de texto.",
+    "in": "---\ntags: [uno, dos, tres]\n---\nx",
+    "campos": { "tags": "uno, dos, tres" },
+    "cuerpo": "x"
+  },
+  {
+    "name": "comillas fuera",
+    "why": "El valor entre comillas se usa tal cual en el pie, sin las comillas.",
+    "in": "---\ntitle: \"Un titulo\"\n---\nx",
+    "campos": { "title": "Un titulo" },
+    "cuerpo": "x"
+  },
+  {
+    "name": "sin cierre NO es frontmatter",
+    "why": "Inventar el cierre se comeria contenido real del documento.",
+    "in": "---\nno cierra nunca\n# Titulo",
+    "campos": null,
+    "cuerpo": "---\nno cierra nunca\n# Titulo"
+  },
+  {
+    "name": "documento sin frontmatter queda intacto",
+    "why": "Un --- en el medio es un separador comun y debe seguir siendolo.",
+    "in": "# Titulo\n\ntexto\n\n---\n\nmas",
+    "campos": null,
+    "cuerpo": "# Titulo\n\ntexto\n\n---\n\nmas"
+  },
+  {
+    "name": "--- fuera de la primera linea no abre frontmatter",
+    "why": "El frontmatter solo existe si arranca en la primerisima linea.",
+    "in": "\n---\na: 1\n---\nx",
+    "campos": null,
+    "cuerpo": "\n---\na: 1\n---\nx"
+  },
+  {
+    "name": "anidado se ignora sin fallar",
+    "why": "Un frontmatter raro no puede impedir que el documento se exporte.",
+    "in": "---\nraiz: si\nobj:\n  hijo: 1\n---\nx",
+    "campos": { "raiz": "si", "obj": "" },
+    "cuerpo": "x"
+  },
+  {
+    "name": "comentarios y lineas vacias se saltan",
+    "why": "Son YAML valido y no son campos.",
+    "in": "---\n# un comentario\n\na: 1\n---\nx",
+    "campos": { "a": "1" },
+    "cuerpo": "x"
+  }
+]

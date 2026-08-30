@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "nota",
-  "name": "Nota",
-  "description": "Sin portada, arranca directo. Compacto, para diagnosticos y listas.",
+  "name": {
+    "en": "Note",
+    "es": "Nota"
+  },
+  "description": {
+    "en": "No cover, straight to the point. Compact, for diagnostics and lists.",
+    "es": "Sin portada, arranca directo. Compacto, para diagnósticos y listas."
+  },
   "version": "1.0.0",
   "extends": "_base",
   "page": {

@@ -23,7 +23,10 @@ const ctx = await esbuild.context({
   sourcemap: production ? false : "inline",
   treeShaking: true,
   minify: production,
-  outfile: "main.js",
+  // A la RAIZ del repo: el community store exige manifest.json y los assets
+  // del release en la raiz, sin soporte para monorepos. El codigo se queda en
+  // plugin/src/ y solo los artefactos suben.
+  outfile: "../main.js",
 });
 
 if (production) {

@@ -46,6 +46,15 @@ for (const nombre of dirs) {
     errores.push(`${nombre}: tokens sin declarar en tokenSchema: ${huerfanos.join(", ")}`);
   }
 
+  // Un varSchema que declara una var inexistente es un formulario que edita
+  // algo que el pie nunca va a leer.
+  const declaradas = Object.keys(t.varSchema ?? {});
+  const existentes = new Set(Object.keys(t.vars ?? {}));
+  const fantasma = declaradas.filter((k) => !existentes.has(k));
+  if (fantasma.length) {
+    errores.push(`${nombre}: varSchema declara vars que no existen: ${fantasma.join(", ")}`);
+  }
+
   const padre = "extends" in t ? t.extends : "_base";
   if (padre !== null && !existsSync(join(T, padre))) {
     errores.push(`${nombre}: extends "${padre}" no existe`);

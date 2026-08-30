@@ -1,8 +1,14 @@
 {
   "$schema": "../theme.schema.json",
   "id": "tecnico",
-  "name": "Tecnico",
-  "description": "Denso, grafito, portada de media carilla. El codigo manda.",
+  "name": {
+    "en": "Technical",
+    "es": "Técnico"
+  },
+  "description": {
+    "en": "Dense, graphite, half-page cover. The code leads.",
+    "es": "Denso, grafito, portada de media carilla. El código manda."
+  },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
@@ -32,12 +38,32 @@
   "footer": {
     "enabled": true,
     "left": "{{vars.confidencialidad}}",
-    "right": "Pagina {{page}} de {{pages}}",
+    "right": {
+      "en": "Page {{page}} of {{pages}}",
+      "es": "Página {{page}} de {{pages}}"
+    },
     "rule": true,
     "fontSize": "7pt",
     "color": "#8a9499"
   },
   "vars": {
-    "confidencialidad": "Confidencial · uso interno"
+    "confidencialidad": {
+      "en": "Confidential · internal use",
+      "es": "Confidencial · uso interno"
+    }
+  },
+  "varSchema": {
+    "confidencialidad": {
+      "type": "text",
+      "label": {
+        "en": "Confidentiality notice",
+        "es": "Aviso de confidencialidad"
+      },
+      "group": "pie",
+      "description": {
+        "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
+        "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."
+      }
+    }
   }
 }

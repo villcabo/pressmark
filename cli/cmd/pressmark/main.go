@@ -41,6 +41,8 @@ OPCIONES
       --temas <dir>    Directorio de theme packs propios
       --chrome <ruta>  Ejecutable de Chrome a usar
   -l, --listar         Lista los theme packs disponibles
+      --idioma <cod>   Idioma de los textos del formato (es, en, pt-BR...).
+                       Por defecto sale de LANG.
   -h, --ayuda          Esta ayuda
 
 THEME PACKS
@@ -59,6 +61,26 @@ type opciones struct {
 	a4       bool
 	soloHTML bool
 	listar   bool
+	idioma   string
+}
+
+// idiomaDelEntorno lee LANG/LC_ALL y devuelve algo como "es" o "pt-BR".
+//
+// El CLI no tiene una app que le diga el idioma como el plugin, asi que se mira
+// el entorno. LANG suele venir "es_BO.UTF-8": hay que quedarse con la parte del
+// idioma y pasar el guion bajo a guion.
+func idiomaDelEntorno() string {
+	for _, v := range []string{os.Getenv("LC_ALL"), os.Getenv("LC_MESSAGES"), os.Getenv("LANG")} {
+		v = strings.TrimSpace(v)
+		if v == "" || v == "C" || v == "POSIX" {
+			continue
+		}
+		if i := strings.IndexByte(v, '.'); i > 0 {
+			v = v[:i]
+		}
+		return strings.ReplaceAll(v, "_", "-")
+	}
+	return "en"
 }
 
 func main() {
@@ -86,15 +108,20 @@ func ejecutar() error {
 	fs_.BoolVar(&o.soloHTML, "html", false, "")
 	fs_.BoolVar(&o.listar, "listar", false, "")
 	fs_.BoolVar(&o.listar, "l", false, "")
+	fs_.StringVar(&o.idioma, "idioma", "", "")
+	fs_.StringVar(&o.idioma, "lang", "", "")
 
 	if err := fs_.Parse(reordenar(fs_, os.Args[1:])); err != nil {
 		return err
 	}
 
+	if o.idioma == "" {
+		o.idioma = idiomaDelEntorno()
+	}
 	packs := theme.Overlay(theme.UserDir(o.temasD), themes.FS())
 
 	if o.listar {
-		return listar(packs)
+		return listar(packs, o.idioma)
 	}
 	entradas, err := expandir(fs_.Args())
 	if err != nil {
@@ -154,7 +181,7 @@ func reordenar(fset *flag.FlagSet, args []string) []string {
 	return append(flags, sueltos...)
 }
 
-func listar(packs fs.FS) error {
+func listar(packs fs.FS, locale string) error {
 	ids, err := theme.List(packs)
 	if err != nil {
 		return err
@@ -170,7 +197,7 @@ func listar(packs fs.FS) error {
 		if t.Cover != nil && t.Cover.Enabled != nil && *t.Cover.Enabled {
 			portada = "con portada"
 		}
-		fmt.Printf("  %-12s %-13s %s\n", id, portada, t.Description)
+		fmt.Printf("  %-12s %-13s %s\n", id, portada, t.Description.Resolve(locale))
 	}
 	return nil
 }
@@ -221,7 +248,10 @@ func convertir(entradas []string, t *theme.Resolved, o opciones) error {
 		if err != nil {
 			return err
 		}
-		titulo := render.Title(src, strings.TrimSuffix(filepath.Base(in), filepath.Ext(in)))
+		// El frontmatter se saca ANTES de todo: su `---` de apertura seria el
+		// primer <hr> del documento y dispararia el salto de portada ahi.
+		fm, src := render.SplitFrontmatter(src)
+		titulo := render.TitleFrom(fm, src, strings.TrimSuffix(filepath.Base(in), filepath.Ext(in)))
 
 		// Los diagramas se sacan ANTES del resaltador: si pasan por chroma
 		// vuelven llenos de <span> y mermaid ya no los parsea.
@@ -246,8 +276,9 @@ func convertir(entradas []string, t *theme.Resolved, o opciones) error {
 			ext, datos = ".html", doc
 		} else {
 			op := opts
-			op.Header = browser.BandOrEmpty(render.BandHTML(t.Header, marginOf(t), t.Vars, titulo))
-			op.Footer = browser.BandOrEmpty(render.BandHTML(t.Footer, marginOf(t), t.Vars, titulo))
+			vars := render.MergeVars(t.Vars, fm, o.idioma)
+			op.Header = browser.BandOrEmpty(render.BandHTML(t.Header, marginOf(t), vars, titulo, o.idioma))
+			op.Footer = browser.BandOrEmpty(render.BandHTML(t.Footer, marginOf(t), vars, titulo, o.idioma))
 			op.ShowBands = enabled(t.Header) || enabled(t.Footer)
 			var pasos []browser.Prep
 			if hayDiagramas {
