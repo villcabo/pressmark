@@ -1,26 +1,33 @@
 {
   "$schema": "../theme.schema.json",
-  "id": "informe",
+  "id": "technical",
   "name": {
-    "en": "Report",
-    "es": "Informe"
+    "en": "Technical",
+    "es": "Técnico"
   },
   "description": {
-    "en": "Formal document with a cover page and generous margins. The canonical one.",
-    "es": "Documento formal con portada y márgenes amplios. El canónico."
+    "en": "Dense, graphite, half-page cover. The code leads.",
+    "es": "Denso, grafito, portada de media carilla. El código manda."
   },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
-    "portada-offset": "58mm"
+    "accent": "#33475b",
+    "accent-soft": "#f1f4f7",
+    "accent-mid": "#c8d3dd",
+    "ink": "#1b2733",
+    "muted": "#5d6b78",
+    "rule": "#d9e0e6",
+    "code-bg": "#f4f7f9",
+    "cover-offset": "22mm"
   },
   "page": {
     "size": "A4",
     "margin": {
-      "top": "24mm",
-      "right": "19mm",
+      "top": "20mm",
+      "right": "16mm",
       "bottom": "18mm",
-      "left": "19mm"
+      "left": "16mm"
     },
     "printBackground": true
   },
@@ -30,29 +37,29 @@
   },
   "footer": {
     "enabled": true,
-    "left": "{{vars.confidencialidad}}",
+    "left": "{{vars.confidentiality}}",
     "right": {
       "en": "Page {{page}} of {{pages}}",
       "es": "Página {{page}} de {{pages}}"
     },
     "rule": true,
     "fontSize": "7pt",
-    "color": "#8a9099"
+    "color": "#8a9499"
   },
   "vars": {
-    "confidencialidad": {
+    "confidentiality": {
       "en": "Confidential · internal use",
       "es": "Confidencial · uso interno"
     }
   },
   "varSchema": {
-    "confidencialidad": {
+    "confidentiality": {
       "type": "text",
       "label": {
         "en": "Confidentiality notice",
         "es": "Aviso de confidencialidad"
       },
-      "group": "pie",
+      "group": "footer",
       "description": {
         "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
         "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."

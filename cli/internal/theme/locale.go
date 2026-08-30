@@ -6,47 +6,47 @@ import (
 	"strings"
 )
 
-// Localized es un texto que se le muestra al usuario: una cadena suelta, o un
-// objeto por idioma. Una cadena suelta vale para todos los idiomas.
+// Localized is user-facing text: a plain string, or a per-language object. A
+// plain string applies to every language.
 type Localized struct {
-	Plano string
-	Por   map[string]string
+	Plain  string
+	ByLang map[string]string
 }
 
 func (l *Localized) UnmarshalJSON(b []byte) error {
 	if len(b) > 0 && b[0] == '"' {
-		return json.Unmarshal(b, &l.Plano)
+		return json.Unmarshal(b, &l.Plain)
 	}
-	return json.Unmarshal(b, &l.Por)
+	return json.Unmarshal(b, &l.ByLang)
 }
 
 func (l Localized) MarshalJSON() ([]byte, error) {
-	if l.Por != nil {
-		return json.Marshal(l.Por)
+	if l.ByLang != nil {
+		return json.Marshal(l.ByLang)
 	}
-	return json.Marshal(l.Plano)
+	return json.Marshal(l.Plain)
 }
 
-// Resolve elige el texto para un idioma.
+// Resolve picks the text for a language.
 //
-// La cadena de respaldo, en orden:
+// The fallback chain, in order:
 //
-//  1. coincidencia exacta      (pt-BR pide pt-BR)
-//  2. el idioma base del pedido (pt-BR cae en pt)
-//  3. cualquier variante de ese idioma, la PRIMERA en orden alfabetico
-//     (pt encuentra pt-BR)
+//  1. exact match                (pt-BR asks for pt-BR)
+//  2. the request's base language (pt-BR falls back to pt)
+//  3. any variant of that language, the FIRST in alphabetical order
+//     (pt finds pt-BR)
 //  4. en
-//  5. cualquier variante de en
-//  6. la primera clave en orden alfabetico
+//  5. any variant of en
+//  6. the first key in alphabetical order
 //
-// El orden alfabetico no es capricho: los mapas de Go iteran al azar, y sin un
-// criterio estable el mismo theme daria textos distintos entre corridas y entre
-// las dos implementaciones.
+// The alphabetical order isn't arbitrary: Go maps iterate randomly, and
+// without a stable criterion the same theme would give different text
+// between runs and between the two implementations.
 func (l Localized) Resolve(locale string) string {
-	if l.Por == nil {
-		return l.Plano
+	if l.ByLang == nil {
+		return l.Plain
 	}
-	if len(l.Por) == 0 {
+	if len(l.ByLang) == 0 {
 		return ""
 	}
 
@@ -55,15 +55,15 @@ func (l Localized) Resolve(locale string) string {
 		locale = "en"
 	}
 
-	if v, ok := l.Por[locale]; ok {
+	if v, ok := l.ByLang[locale]; ok {
 		return v
 	}
 
-	claves := make([]string, 0, len(l.Por))
-	for k := range l.Por {
-		claves = append(claves, k)
+	keys := make([]string, 0, len(l.ByLang))
+	for k := range l.ByLang {
+		keys = append(keys, k)
 	}
-	sort.Strings(claves)
+	sort.Strings(keys)
 
 	base := func(s string) string {
 		if i := strings.IndexByte(s, '-'); i > 0 {
@@ -73,17 +73,17 @@ func (l Localized) Resolve(locale string) string {
 	}
 
 	for _, cand := range []string{base(locale), "en"} {
-		if v, ok := l.Por[cand]; ok {
+		if v, ok := l.ByLang[cand]; ok {
 			return v
 		}
-		for _, k := range claves {
+		for _, k := range keys {
 			if base(k) == cand {
-				return l.Por[k]
+				return l.ByLang[k]
 			}
 		}
 	}
-	return l.Por[claves[0]]
+	return l.ByLang[keys[0]]
 }
 
-// String hace utilizable el valor sin resolver, para logs y errores.
+// String makes the unresolved value usable for logs and errors.
 func (l Localized) String() string { return l.Resolve("en") }

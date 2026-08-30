@@ -1,48 +1,50 @@
-# Formato de theme pack
+# Theme pack format
 
-Un theme pack es una carpeta con dos archivos obligatorios:
+A theme pack is a folder with two required files:
 
 ```
-mi-theme/
-├─ theme.json      identidad, tokens y geometria de pagina
-├─ theme.css       estilos, que consumen los tokens con var(--nombre)
-└─ fonts/          opcional: tipografias empaquetadas
+my-theme/
+├─ theme.json      identity, tokens and page geometry
+├─ theme.css       styles, which consume the tokens through var(--name)
+└─ fonts/          optional: bundled typefaces
 ```
 
-El esquema formal esta en [`../themes/theme.schema.json`](../themes/theme.schema.json).
-`bun run validate` verifica todos los packs contra el.
+The formal schema lives in [`../themes/theme.schema.json`](../themes/theme.schema.json).
+`bun run validate` checks every pack against it.
 
-## La regla que ordena todo
+## The rule that holds everything together
 
-> **La paleta y la geometria de pagina viven en `theme.json`. El CSS solo las consume.**
+> **The palette and the page geometry live in `theme.json`. The CSS only
+> consumes them.**
 
-El renderer lee `theme.json`, emite los tokens como variables CSS en `:root`, y
-recien despues carga `theme.css`. Por eso un `theme.css` **no puede** declarar
-`:root` ni `@page` — el validador lo rechaza.
+The renderer reads `theme.json`, emits the tokens as CSS variables on `:root`,
+and only then loads `theme.css`. That is why a `theme.css` **cannot** declare
+`:root` or `@page` — the validator rejects it.
 
-¿Y por que tanto rigor? Porque la alternativa ya se probo y fallo: en el formato
-viejo el margen estaba en el CSS *y* en un JSON aparte, con valores distintos en
-los 6 temas y sin que nadie se enterara. Una sola fuente de verdad no es purismo,
-es la unica forma de que eso no vuelva a pasar.
+Why so strict? Because the alternative was already tried and it failed: in the
+old format the margin lived in the CSS *and* in a separate JSON, with different
+values in all six themes and nothing to warn anyone. One source of truth is not
+purism here, it is the only thing that keeps that from happening again. See
+[`format-rationale.md`](format-rationale.md).
 
 ## `theme.json`
 
 ```jsonc
 {
   "$schema": "../theme.schema.json",
-  "id": "mi-theme",              // debe coincidir con el nombre de la carpeta
-  "name": "Mi Theme",
+  "id": "my-theme",              // must match the folder name
+  "name": "My Theme",
   "version": "1.0.0",
-  "extends": "_base",            // herencia por clave; el CSS se apila
+  "extends": "_base",            // key-by-key inheritance; CSS is stacked
 
-  "tokens": {                    // se emiten como --acento, --tinta, ...
-    "acento": "#1e4d3b",
-    "portada-offset": "58mm"
+  "tokens": {                    // emitted as --accent, --ink, ...
+    "accent": "#1e4d3b",
+    "cover-offset": "58mm"
   },
 
   "page": {
-    "size": "A4",                // o { "width": "...", "height": "..." }
-    "margin": { "top": "24mm", "right": "18mm", "bottom": "18mm", "left": "18mm" },
+    "size": "A4",                // or { "width": "...", "height": "..." }
+    "margin": { "top": "24mm", "right": "19mm", "bottom": "18mm", "left": "19mm" },
     "printBackground": true
   },
 
@@ -50,74 +52,107 @@ es la unica forma de que eso no vuelva a pasar.
 
   "footer": {
     "enabled": true,
-    "left":  "{{vars.confidencialidad}}",
-    "right": "Pagina {{page}} de {{pages}}",
+    "left":  "{{vars.confidentiality}}",
+    "right": "Page {{page}} of {{pages}}",
     "rule": true
   },
-  "vars": { "confidencialidad": "Confidencial · uso interno" }
+  "vars": { "confidentiality": "Confidential · internal use" }
 }
 ```
 
-### Herencia
+### Inheritance
 
-`extends` mezcla **clave a clave** (superficial): `tokens`, `page`, `cover`,
-`header`, `footer` y `vars`. El CSS no se mezcla, se **apila**: primero el del
-padre, despues el propio. `extends: null` no hereda nada.
+`extends` merges **key by key** (shallow): `tokens`, `page`, `cover`, `header`,
+`footer` and `vars`. CSS is not merged, it is **stacked**: the parent's first,
+then your own. `extends: null` inherits nothing.
 
-Un pack cuyo `id` empieza con `_` es interno: se puede heredar de el, pero no se
-le ofrece al usuario para elegir.
+A pack whose `id` starts with `_` is internal: you can inherit from it, but it
+is not offered to the user as a choice.
 
-## Portada por convencion
+### Localized text
 
-No hay markup especial. La portada se arma con lo que ya escribis en Markdown:
+Anything the reader sees can be a plain string or an object keyed by language:
 
-```markdown
-# Titulo del documento          <- primer h1: el titulo
-
-**Sistema:** X · **Fecha:** Y   <- el parrafo que sigue: la metadata
-
----                             <- el primer <hr>: cierra la portada
+```jsonc
+"footer": { "right": { "en": "Page {{page}} of {{pages}}",
+                       "es": "Página {{page}} de {{pages}}" } }
 ```
 
-`cover.enabled` prende el tratamiento; `cover.break` decide si el `<hr>` corta
-pagina. El alto se controla con el token `portada-offset`, no con CSS.
+It applies to `name`, `description`, `vars`, header and footer slots, and the
+labels in `tokenSchema` / `varSchema`. A plain string is used for every
+language, so no pack is forced to translate anything.
 
-## Encabezado y pie
+The fallback chain, in order: exact match, the requested base language
+(`pt-BR` falls back to `pt`), any variant of that language, `en`, any variant of
+`en`, and finally the first key in alphabetical order. Alphabetical order is not
+arbitrary — Go maps iterate randomly, and without a stable rule the CLI and the
+plugin could pick different text for the same pack.
 
-Se componen por ranuras `left` / `center` / `right`. El renderer genera el HTML
-e **inyecta el margen lateral por su cuenta**, para que nunca haya que
-sincronizarlo a mano con `page.margin`.
+## Cover pages by convention
 
-Placeholders: `{{page}}`, `{{pages}}`, `{{title}}`, `{{date}}`, `{{file}}` y
-`{{vars.CUALQUIERA}}`.
+There is no special markup. The cover is built from what you already write:
 
-## Contrato de estructura HTML
+```markdown
+# Document title                <- the first h1: the title
 
-Los dos renderers envuelven el documento en:
+**System:** X · **Date:** Y     <- the paragraph (or table) that follows: metadata
+
+---                             <- the first <hr>: closes the cover
+```
+
+`cover.enabled` turns the treatment on; `cover.break` decides whether the `<hr>`
+breaks the page. The height is controlled by the `cover-offset` token, not by
+CSS.
+
+Both a paragraph and a **table** work as the metadata block. Real documents tend
+to use a two-column table, and it is styled as metadata rather than as a data
+table: no header band, narrow first column in the muted color.
+
+## Header and footer
+
+They are composed from `left` / `center` / `right` slots. The renderer generates
+the HTML and **injects the side margin itself**, so it can never drift out of
+sync with `page.margin`.
+
+Placeholders: `{{page}}`, `{{pages}}`, `{{title}}`, `{{date}}`, `{{file}}`,
+`{{vars.ANY}}`, and `{{fm.FIELD}}` for any field in the note's frontmatter.
+
+## HTML structure contract
+
+Both renderers wrap the document in:
 
 ```html
 <article class="pm-doc"> ... </article>
 ```
 
-y garantizan que los bloques de primer nivel (`h1`, `p`, `hr`, `table`, ...) sean
-hijos **directos** de ese elemento. El CSS de los themes depende de eso:
-`.pm-doc > h1:first-of-type` es lo que hace la portada.
+and guarantee that top-level blocks (`h1`, `p`, `hr`, `table`, ...) are
+**direct** children of that element. The theme CSS depends on it:
+`.pm-doc > h1:first-of-type` is what builds the cover.
 
-Sin este contrato el mismo theme pack rendiria distinto en la terminal y en
-Obsidian, que es exactamente lo que el proyecto existe para evitar.
+Without this contract the same theme pack would render differently in the
+terminal and in Obsidian, which is exactly what this project exists to prevent.
 
-## `tokenSchema` y la UI
+## `tokenSchema`, `varSchema` and the settings UI
 
-`themes/_base/theme.json` declara el tipo y la etiqueta de cada token:
+`themes/_base/theme.json` declares the type and label of every token:
 
 ```jsonc
 "tokenSchema": {
-  "acento": { "type": "color", "group": "paleta", "label": "Acento" }
+  "accent": { "type": "color", "group": "palette", "label": "Accent" }
 }
 ```
 
-Tipos: `color`, `font-stack`, `length`, `number`, `text`.
+Types: `color`, `font-stack`, `length`, `number`, `text`.
 
-El plugin **genera el formulario leyendo esto**. No hay 13 color pickers
-escritos a mano: agregas un token con su entrada de schema y su control aparece
-solo. Un token sin entrada en `tokenSchema` es un error de validacion.
+**The plugin builds its form by reading this.** There are no hand-written color
+pickers: you add a token together with its schema entry and its control shows
+up on its own. A token with no schema entry is a validation error.
+
+`varSchema` is the same thing for `vars` — the text a format prints, such as the
+footer notice. A var declared there becomes editable from the settings tab.
+
+The final precedence for a var, highest first:
+
+```
+the note's frontmatter  >  the user's override  >  the theme pack
+```

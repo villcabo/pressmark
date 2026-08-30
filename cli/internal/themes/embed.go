@@ -1,8 +1,8 @@
-// Package themes lleva los theme packs adentro del binario.
+// Package themes carries the theme packs inside the binary.
 //
-// El contenido de packs/ es una COPIA de themes/ del repo, hecha por
-// `make sync-themes`. Se copia y no se referencia porque go:embed no admite
-// rutas con '..': el patron tiene que estar debajo del paquete.
+// The content of packs/ is a COPY of the repo's themes/, made by
+// `make sync-themes`. It's copied rather than referenced because go:embed
+// doesn't allow paths with '..': the pattern has to be below the package.
 package themes
 
 import (
@@ -13,11 +13,11 @@ import (
 //go:embed all:packs
 var embedded embed.FS
 
-// FS devuelve los theme packs embebidos, con packs/ ya como raiz.
+// FS returns the embedded theme packs, with packs/ already as the root.
 func FS() fs.FS {
 	sub, err := fs.Sub(embedded, "packs")
 	if err != nil {
-		panic(err) // solo puede fallar si el embed se rompio en tiempo de compilacion
+		panic(err) // can only fail if the embed broke at compile time
 	}
 	return sub
 }

@@ -6,43 +6,43 @@ import (
 	"testing"
 )
 
-// Los casos son COMPARTIDOS con el cargador de TypeScript del plugin:
+// The cases are SHARED with the plugin's TypeScript loader:
 // testdata/conformance/locale.json
 func TestLocalizedResolve(t *testing.T) {
 	raw, err := os.ReadFile("../../../testdata/conformance/locale.json")
 	if err != nil {
-		t.Fatalf("no pude leer los casos: %v", err)
+		t.Fatalf("could not read the cases: %v", err)
 	}
-	var casos []struct {
+	var cases []struct {
 		Name   string          `json:"name"`
 		Why    string          `json:"why"`
-		Valor  json.RawMessage `json:"valor"`
+		Value  json.RawMessage `json:"value"`
 		Locale string          `json:"locale"`
-		Quiere string          `json:"quiere"`
+		Want   string          `json:"want"`
 	}
-	if err := json.Unmarshal(raw, &casos); err != nil {
-		t.Fatalf("locale.json invalido: %v", err)
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatalf("invalid locale.json: %v", err)
 	}
-	if len(casos) == 0 {
-		t.Fatal("locale.json esta vacio")
+	if len(cases) == 0 {
+		t.Fatal("locale.json is empty")
 	}
 
-	for _, c := range casos {
+	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			var l Localized
-			if err := json.Unmarshal(c.Valor, &l); err != nil {
-				t.Fatalf("valor invalido: %v", err)
+			if err := json.Unmarshal(c.Value, &l); err != nil {
+				t.Fatalf("invalid value: %v", err)
 			}
-			if got := l.Resolve(c.Locale); got != c.Quiere {
-				t.Errorf("%s | quiere %q, obtuvo %q", c.Why, c.Quiere, got)
+			if got := l.Resolve(c.Locale); got != c.Want {
+				t.Errorf("%s | want %q, got %q", c.Why, c.Want, got)
 			}
 		})
 	}
 }
 
 func TestLocalizedRoundTrip(t *testing.T) {
-	// Un theme resuelto tiene que volver a ser un theme.json valido: el plugin
-	// guarda las personalizaciones del usuario reserializando.
+	// A resolved theme has to be a valid theme.json again: the plugin saves
+	// the user's customizations by re-serializing it.
 	for _, in := range []string{`"suelto"`, `{"en":"Report","es":"Informe"}`} {
 		var l Localized
 		if err := json.Unmarshal([]byte(in), &l); err != nil {
@@ -53,7 +53,7 @@ func TestLocalizedRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		if string(out) != in {
-			t.Errorf("round-trip: quiere %s, obtuvo %s", in, out)
+			t.Errorf("round-trip: want %s, got %s", in, out)
 		}
 	}
 }

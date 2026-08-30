@@ -13,10 +13,10 @@ import (
 	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
-// Estos casos los corren TAMBIEN el cargador de TypeScript del plugin. Viven en
-// testdata/conformance/cases.json, fuera del modulo de Go, justamente para que
-// no sean "los tests de Go": son el contrato.
-const casosPath = "../../../testdata/conformance/cases.json"
+// These cases are ALSO run by the plugin's TypeScript loader. They live in
+// testdata/conformance/cases.json, outside the Go module, precisely so they
+// aren't just "Go's tests": they are the contract.
+const casesPath = "../../../testdata/conformance/cases.json"
 
 type caso struct {
 	Name  string `json:"name"`
@@ -30,20 +30,20 @@ type caso struct {
 	ExpectError string          `json:"expectError"`
 }
 
-func TestConformidad(t *testing.T) {
-	raw, err := os.ReadFile(casosPath)
+func TestConformance(t *testing.T) {
+	raw, err := os.ReadFile(casesPath)
 	if err != nil {
-		t.Fatalf("no pude leer los casos: %v", err)
+		t.Fatalf("could not read the cases: %v", err)
 	}
-	var casos []caso
-	if err := json.Unmarshal(raw, &casos); err != nil {
-		t.Fatalf("cases.json invalido: %v", err)
+	var cases []caso
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatalf("invalid cases.json: %v", err)
 	}
-	if len(casos) == 0 {
-		t.Fatal("cases.json esta vacio")
+	if len(cases) == 0 {
+		t.Fatal("cases.json is empty")
 	}
 
-	for _, c := range casos {
+	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			fsys := fstest.MapFS{}
 			for id, p := range c.Packs {
@@ -55,84 +55,86 @@ func TestConformidad(t *testing.T) {
 
 			if c.ExpectError != "" {
 				if err == nil {
-					t.Fatalf("%s\n  esperaba error con %q, resolvio sin error", c.Why, c.ExpectError)
+					t.Fatalf("%s\n  expected an error mentioning %q, resolved without error", c.Why, c.ExpectError)
 				}
 				if !strings.Contains(err.Error(), c.ExpectError) {
-					t.Fatalf("%s\n  el error no menciona %q: %v", c.Why, c.ExpectError, err)
+					t.Fatalf("%s\n  the error doesn't mention %q: %v", c.Why, c.ExpectError, err)
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("%s\n  %v", c.Why, err)
 			}
-			comparar(t, c.Why, c.Expect, got)
+			compare(t, c.Why, c.Expect, got)
 		})
 	}
 }
 
-var espacios = regexp.MustCompile(`\s+`)
+var whitespace = regexp.MustCompile(`\s+`)
 
-// comparar verifica SOLO las claves presentes en expect. El resto se ignora a
-// proposito: un caso declara la regla que le importa, no el objeto entero.
-func comparar(t *testing.T, why string, expect json.RawMessage, got *theme.Resolved) {
+// compare checks ONLY the keys present in expect. Everything else is
+// deliberately ignored: a case declares the rule it cares about, not the
+// whole object.
+func compare(t *testing.T, why string, expect json.RawMessage, got *theme.Resolved) {
 	t.Helper()
 
-	var esperado map[string]any
-	if err := json.Unmarshal(expect, &esperado); err != nil {
-		t.Fatalf("expect invalido: %v", err)
+	var expected map[string]any
+	if err := json.Unmarshal(expect, &expected); err != nil {
+		t.Fatalf("invalid expect: %v", err)
 	}
 
-	// El CSS se compara normalizando espacios: cada implementacion arma sus
-	// comentarios separadores a su manera y eso no es parte del contrato.
-	if v, ok := esperado["css"]; ok {
-		delete(esperado, "css")
-		q := espacios.ReplaceAllString(strings.TrimSpace(v.(string)), " ")
-		g := espacios.ReplaceAllString(strings.TrimSpace(sinComentariosSep(got.CSS)), " ")
+	// The CSS is compared with whitespace normalized: each implementation
+	// builds its separator comments its own way and that isn't part of the
+	// contract.
+	if v, ok := expected["css"]; ok {
+		delete(expected, "css")
+		q := whitespace.ReplaceAllString(strings.TrimSpace(v.(string)), " ")
+		g := whitespace.ReplaceAllString(strings.TrimSpace(stripSeparatorComments(got.CSS)), " ")
 		if q != g {
-			t.Errorf("%s\n  css:\n    quiere %q\n    obtuvo %q", why, q, g)
+			t.Errorf("%s\n  css:\n    want %q\n    got %q", why, q, g)
 		}
 	}
-	if v, ok := esperado["chain"]; ok {
-		delete(esperado, "chain")
+	if v, ok := expected["chain"]; ok {
+		delete(expected, "chain")
 		var q []string
 		for _, x := range v.([]any) {
 			q = append(q, x.(string))
 		}
 		if !reflect.DeepEqual(q, got.Chain) {
-			t.Errorf("%s\n  chain: quiere %v, obtuvo %v", why, q, got.Chain)
+			t.Errorf("%s\n  chain: want %v, got %v", why, q, got.Chain)
 		}
 	}
 
-	// El resto se compara serializando el resuelto: asi el test no depende de
-	// como estan modelados los punteros por dentro.
-	crudo, err := json.Marshal(got.Theme)
+	// The rest is compared by serializing the resolved theme: that way the
+	// test doesn't depend on how the pointers are modeled internally.
+	raw, err := json.Marshal(got.Theme)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var real map[string]any
-	if err := json.Unmarshal(crudo, &real); err != nil {
+	var actual map[string]any
+	if err := json.Unmarshal(raw, &actual); err != nil {
 		t.Fatal(err)
 	}
-	for k, q := range esperado {
-		g, presente := real[k]
-		if !presente {
-			t.Errorf("%s\n  falta la clave %q en el resultado", why, k)
+	for k, q := range expected {
+		g, present := actual[k]
+		if !present {
+			t.Errorf("%s\n  missing key %q in the result", why, k)
 			continue
 		}
-		if !parcial(q, g) {
-			t.Errorf("%s\n  %s:\n    quiere %s\n    obtuvo %s", why, k, jsonStr(q), jsonStr(g))
+		if !partial(q, g) {
+			t.Errorf("%s\n  %s:\n    want %s\n    got %s", why, k, jsonStr(q), jsonStr(g))
 		}
 	}
 }
 
-// parcial: para objetos compara solo las claves de q; para el resto, igualdad.
-func parcial(q, g any) bool {
+// partial: for objects it compares only q's keys; for everything else, equality.
+func partial(q, g any) bool {
 	qm, qok := q.(map[string]any)
 	gm, gok := g.(map[string]any)
 	if qok && gok {
 		for k, v := range qm {
 			gv, ok := gm[k]
-			if !ok || !parcial(v, gv) {
+			if !ok || !partial(v, gv) {
 				return false
 			}
 		}
@@ -146,18 +148,19 @@ func jsonStr(v any) string {
 	return string(b)
 }
 
-// sinComentariosSep saca los "/* ── id ── */" que el cargador de Go intercala.
-func sinComentariosSep(css string) string {
+// stripSeparatorComments removes the "/* ── id ── */" the Go loader
+// interleaves.
+func stripSeparatorComments(css string) string {
 	re := regexp.MustCompile(`/\* ── [^─]* ── \*/`)
 	return re.ReplaceAllString(css, " ")
 }
 
 func ExampleLoad() {
 	fsys := fstest.MapFS{
-		"_base/theme.json": &fstest.MapFile{Data: []byte(`{"id":"_base","name":"B","version":"1.0.0","extends":null,"tokens":{"acento":"#111"}}`)},
+		"_base/theme.json": &fstest.MapFile{Data: []byte(`{"id":"_base","name":"B","version":"1.0.0","extends":null,"tokens":{"accent":"#111"}}`)},
 		"_base/theme.css":  &fstest.MapFile{Data: []byte("a{}")},
 	}
 	t, _ := theme.Load(fsys, "_base")
-	fmt.Println(t.Tokens["acento"])
+	fmt.Println(t.Tokens["accent"])
 	// Output: #111
 }

@@ -1,39 +1,39 @@
 /* ============================================================================
-   _base/theme.css — estilos comunes a todos los theme packs de pressmark.
-   Nunca se usa sola: el renderer la carga primero y encima apila el tema.
+   _base/theme.css — styles shared by every pressmark theme pack.
+   Never used alone: the renderer loads it first and stacks the theme on top.
 
-   La geometria de pagina (@page) y la paleta (:root) NO viven aca: salen de
-   theme.json y el renderer las emite antes de este archivo. Este archivo solo
-   consume los tokens con var(--nombre).
+   Page geometry (@page) and the palette (:root) do NOT live here: they come
+   from theme.json, and the renderer emits them before this file. This file
+   only consumes the tokens with var(--name).
 
-   Criterios de diseño, para que no se pierdan:
+   Design criteria, so they don't get lost:
 
-   1. El encabezado de tabla NO lleva bloque de color sólido. Un documento con
-      seis tablas y seis franjas saturadas parece un formulario. La jerarquía
-      la da una regla gruesa en el acento, que además imprime bien en B/N.
-   2. El código inline no lleva borde. En estos documentos hay veinte
-      identificadores por página; con recuadro, cada uno corta la línea.
-   3. Los títulos no llevan filete gris debajo. Separan por peso y por aire.
-      El tema que quiera una regla la agrega.
+   1. Table headers carry NO solid color band. A document with six tables and
+      six saturated bands reads like a form. The hierarchy comes from a thick
+      rule in the accent color, which also prints well in black and white.
+   2. Inline code carries no border. These documents have twenty identifiers
+      per page; with a box, each one cuts the line.
+   3. Headings carry no gray hairline underneath. They separate by weight and
+      by whitespace. The theme that wants a rule adds it.
 
-   Para cambiar la identidad visual, tocar los tokens de theme.json.
+   To change the visual identity, edit the tokens in theme.json.
    ========================================================================== */
 
 .pm-doc {
-  font-family: var(--fuente);
-  color: var(--tinta);
+  font-family: var(--font);
+  color: var(--ink);
   line-height: 1.5;
   max-width: none;
   margin: 0;
   padding: 0;
   text-rendering: optimizeLegibility;
-  hyphens: none;              /* evita cortes raros en español */
+  hyphens: none;              /* avoids odd hyphenation breaks in Spanish */
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
-/* ── Títulos ─────────────────────────────────────────────────────────────
-   break-after: avoid evita que un título quede solo al pie de página.     */
+/* ── Headings ────────────────────────────────────────────────────────────
+   break-after: avoid keeps a heading from being stranded at the page foot. */
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
@@ -47,93 +47,90 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size: 1.85rem;
   margin: 0 0 0.6em;
-  color: var(--acento);
+  color: var(--accent);
 }
 
 h2 {
   font-size: 1.32rem;
   margin: 2em 0 0.6em;
-  color: var(--acento);
+  color: var(--accent);
 }
 
 h3 {
   font-size: 1.08rem;
   margin: 1.6em 0 0.4em;
-  color: var(--tinta);
+  color: var(--ink);
 }
 
 h4 {
   font-size: 0.82rem;
   margin: 1.2em 0 0.3em;
-  color: var(--tenue);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.7pt;
   font-weight: 600;
 }
 
-/* ── Texto ───────────────────────────────────────────────────────────── */
+/* ── Text ────────────────────────────────────────────────────────────── */
 
 p { margin: 0 0 0.75em; orphans: 3; widows: 3; }
 strong { font-weight: 600; color: #000; }
-a { color: var(--acento); text-decoration: none; border-bottom: 0.4pt solid var(--acento-medio); }
+a { color: var(--accent); text-decoration: none; border-bottom: 0.4pt solid var(--accent-mid); }
 
 ul, ol { margin: 0 0 0.8em; padding-left: 1.4em; orphans: 3; widows: 3; }
 li { margin-bottom: 0.25em; }
 li > ul, li > ol { margin-top: 0.25em; }
-li::marker { color: var(--acento); }
+li::marker { color: var(--accent); }
 
 blockquote {
   margin: 1em 0;
   padding: 0.6em 1em;
-  border-left: 2pt solid var(--aviso);
-  background: var(--aviso-fondo);
+  border-left: 2pt solid var(--notice);
+  background: var(--notice-bg);
   color: #5c3d0c;
   break-inside: avoid;
 }
 blockquote p:last-child { margin-bottom: 0; }
 
-hr { border: 0; border-top: 0.5pt solid var(--regla); margin: 1.8em 0; }
+hr { border: 0; border-top: 0.5pt solid var(--rule); margin: 1.8em 0; }
 
-/* ── Código: el dato citado, no un chip ──────────────────────────────── */
+/* ── Code: the quoted data point, not a chip ─────────────────────────── */
 
 code, kbd, samp {
-  font-family: var(--fuente-mono);
+  font-family: var(--font-mono);
   font-size: 0.87em;
 }
 
 :not(pre) > code {
-  background: var(--papel-codigo);
+  background: var(--code-bg);
   border: none;
   border-radius: 2pt;
   padding: 0.1em 0.3em;
-  color: var(--acento);
+  color: var(--accent);
   font-weight: 500;
   white-space: nowrap;
 }
 
 pre {
-  background: var(--papel-codigo);
+  background: var(--code-bg);
   border: none;
-  border-left: 2.5pt solid var(--acento-medio);
+  border-left: 2.5pt solid var(--accent-mid);
   border-radius: 0 3pt 3pt 0;
   padding: 0.8em 1em;
   margin: 1em 0;
-  overflow: visible;          /* en papel no hay scroll: hay que envolver */
+  overflow: visible;          /* no scrolling on paper: wrapping is required */
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.45;
   break-inside: avoid;
-  color: var(--tinta);
+  color: var(--ink);
 }
 pre code {
   background: none; border: 0; padding: 0;
   white-space: inherit; color: inherit; font-weight: 400;
 }
 
-/* Bloques muy largos: permitir el corte antes que desbordar la página */
-pre.largo { break-inside: auto; }
-
-/* ── Tablas: regla, no bloque ────────────────────────────────────────── */
+/* ── Tables: a rule, not a block ─────────────────────────────────────── */
 
 table {
   border-collapse: collapse;
@@ -143,14 +140,14 @@ table {
   break-inside: auto;
 }
 
-thead { display: table-header-group; }   /* repite el encabezado en cada página */
+thead { display: table-header-group; }   /* repeats the header on every page */
 tr { break-inside: avoid; page-break-inside: avoid; }
 
 th {
   background: none;
-  color: var(--acento);
+  color: var(--accent);
   border: none;
-  border-bottom: 1.5pt solid var(--acento);
+  border-bottom: 1.5pt solid var(--accent);
   font-weight: 600;
   font-size: 0.86em;
   text-transform: uppercase;
@@ -162,73 +159,82 @@ th {
 
 td {
   border: none;
-  border-bottom: 0.4pt solid var(--regla);
+  border-bottom: 0.4pt solid var(--rule);
   padding: 0.45em 0.7em;
   text-align: left;
   vertical-align: top;
   word-break: break-word;
 }
 
-/* La zebra cita el papel de barras verdes de los listados de conciliación */
-tbody tr:nth-child(even) { background: var(--acento-tenue); }
+/* The zebra striping nods to the green-barred paper of reconciliation listings */
+tbody tr:nth-child(even) { background: var(--accent-soft); }
 
 table code { font-size: 0.88em; white-space: normal; }
 
-/* ── Imágenes ────────────────────────────────────────────────────────── */
+/* ── Images ──────────────────────────────────────────────────────────── */
 
 img { max-width: 100%; height: auto; break-inside: avoid; }
 
-/* ── Diagramas mermaid ───────────────────────────────────────────────────
-   Los inserta md2pdf ya renderizados a SVG. Centrados, sin caja: el diagrama
-   ya trae su propia estructura y encerrarlo agrega ruido. */
+/* ── Mermaid diagrams ─────────────────────────────────────────────────────
+   The renderer emits <pre class="mermaid"> and mermaid.js replaces its content
+   with an SVG in place. So this has to undo the code-block look the element
+   inherits from `pre`, and it must target the element that actually exists:
+   an earlier version styled a wrapper class nothing ever emitted, which left
+   every diagram uncentered and free to split across pages.
 
-.mermaid-figura {
+   Centered and unframed: the diagram already carries its own structure, and
+   boxing it only adds noise. */
+
+pre.mermaid {
   margin: 1.4em 0;
+  padding: 0;
+  background: none;
+  border: none;
   text-align: center;
   break-inside: avoid;
 }
 
-.mermaid-figura svg {
+pre.mermaid svg {
   max-width: 100%;
   height: auto;
 }
 
-/* ── Índice (--toc de pandoc) ────────────────────────────────────────── */
+/* ── Table of contents (pandoc's --toc) ──────────────────────────────── */
 
 nav#TOC {
   border: none;
-  border-left: 2.5pt solid var(--acento-medio);
-  background: var(--acento-tenue);
+  border-left: 2.5pt solid var(--accent-mid);
+  background: var(--accent-soft);
   padding: 1em 1.4em;
   margin-bottom: 2em;
   break-after: page;
   font-size: 0.92em;
 }
 nav#TOC > ul { padding-left: 1em; }
-nav#TOC a { text-decoration: none; border: none; color: var(--tinta); }
+nav#TOC a { text-decoration: none; border: none; color: var(--ink); }
 
-/* ── Ajustes finos de impresión ──────────────────────────────────────── */
+/* ── Print fine-tuning ──────────────────────────────────────────────── */
 
 @media print {
   .pm-doc { padding: 0; }
-  /* El PDF no es clickeable en papel: mostrar la URL de los enlaces externos */
+  /* A PDF isn't clickable on paper: show the URL for external links */
   a[href^="http"]::after {
     content: " (" attr(href) ")";
     font-size: 0.78em;
-    color: var(--tenue);
+    color: var(--muted);
     word-break: break-all;
   }
   a[href^="#"]::after { content: ""; }
 }
 
-/* ── Metadata de portada en tabla ────────────────────────────────────────
-   Los documentos reales no ponen la metadata de portada en un parrafo: usan
-   una tabla de dos columnas (etiqueta | valor), casi siempre con encabezado
-   vacio. Sin esto hereda el tratamiento de tabla de datos —regla gruesa en el
-   acento, celdas anchas— y la portada parece una planilla.
+/* ── Cover metadata in table form ──────────────────────────────────────
+   Real documents don't put the cover metadata in a paragraph: they use a
+   two-column table (label | value), almost always with an empty header.
+   Without this it inherits the data-table treatment — thick rule in the
+   accent color, wide cells — and the cover page reads like a spreadsheet.
 
-   La regla superior la pone el tema en su bloque de metadata; aca solo se
-   desarma lo que sobra. */
+   The theme sets the top rule in its metadata block; here we just strip
+   away what's left over. */
 
 .pm-doc > h1:first-of-type + table {
   width: 100%;
@@ -248,11 +254,11 @@ nav#TOC a { text-decoration: none; border: none; color: var(--tinta); }
   line-height: inherit;
 }
 
-/* Primera columna: la etiqueta. Angosta y sin competir con el valor. */
+/* First column: the label. Narrow, and doesn't compete with the value. */
 .pm-doc > h1:first-of-type + table td:first-child,
 .pm-doc > h1:first-of-type + table th:first-child {
   width: 34%;
   padding-right: 5mm;
   font-weight: 600;
-  color: var(--tenue);
+  color: var(--muted);
 }

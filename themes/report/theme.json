@@ -1,35 +1,26 @@
 {
   "$schema": "../theme.schema.json",
-  "id": "moderno",
+  "id": "report",
   "name": {
-    "en": "Modern",
-    "es": "Moderno"
+    "en": "Report",
+    "es": "Informe"
   },
   "description": {
-    "en": "Inter Display, plum, soft corners. For proposals and product docs.",
-    "es": "Inter Display, ciruela, esquinas suaves. Para propuestas y producto."
+    "en": "Formal document with a cover page and generous margins. The canonical one.",
+    "es": "Documento formal con portada y márgenes amplios. El canónico."
   },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
-    "acento": "#6b2d5c",
-    "acento-tenue": "#faf3f8",
-    "acento-medio": "#ddc2d5",
-    "tinta": "#241d22",
-    "tenue": "#6b5f67",
-    "regla": "#e3d9e0",
-    "papel-codigo": "#faf7f9",
-    "aviso": "#8a5a12",
-    "fuente-titulo": "\"Inter Display\", \"Inter\", \"Segoe UI\", system-ui, sans-serif",
-    "portada-offset": "62mm"
+    "cover-offset": "58mm"
   },
   "page": {
     "size": "A4",
     "margin": {
       "top": "24mm",
-      "right": "21mm",
-      "bottom": "20mm",
-      "left": "21mm"
+      "right": "19mm",
+      "bottom": "18mm",
+      "left": "19mm"
     },
     "printBackground": true
   },
@@ -39,29 +30,29 @@
   },
   "footer": {
     "enabled": true,
-    "left": "{{vars.confidencialidad}}",
+    "left": "{{vars.confidentiality}}",
     "right": {
       "en": "Page {{page}} of {{pages}}",
       "es": "Página {{page}} de {{pages}}"
     },
     "rule": true,
     "fontSize": "7pt",
-    "color": "#7d928f"
+    "color": "#8a9099"
   },
   "vars": {
-    "confidencialidad": {
+    "confidentiality": {
       "en": "Confidential · internal use",
       "es": "Confidencial · uso interno"
     }
   },
   "varSchema": {
-    "confidencialidad": {
+    "confidentiality": {
       "type": "text",
       "label": {
         "en": "Confidentiality notice",
         "es": "Aviso de confidencialidad"
       },
-      "group": "pie",
+      "group": "footer",
       "description": {
         "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
         "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."

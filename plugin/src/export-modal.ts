@@ -1,74 +1,75 @@
 /**
- * Modal de exportacion: elegir formato, ajustar y VER antes de generar.
+ * Export modal: pick a format, adjust it, and SEE it before generating.
  *
- * La vista previa no es decorativa. Renderiza el documento con el mismo CSS del
- * theme y a la proporcion real del papel, asi que se ve la portada, la paleta y
- * el desborde de tablas anchas ANTES de escribir el archivo. Cambiar de theme
- * no vuelve a renderizar el markdown: solo se reenvuelve el cuerpo ya
- * renderizado con otro CSS, que es instantaneo.
+ * The preview isn't decorative. It renders the document with the theme's
+ * actual CSS and at the paper's real proportions, so the cover page, the
+ * palette and wide tables overflowing are visible BEFORE the file gets
+ * written. Switching themes doesn't re-render the markdown: it just
+ * rewraps the already-rendered body with different CSS, which is instant.
  */
 import { App, Modal, Notice, Setting, type TFile } from "obsidian";
 import type { Resolved, Page } from "./theme";
 import { documentHTML } from "./render";
-import { tamanoPapel } from "./pdf";
-import { t, idioma } from "./i18n";
+import { paperSize } from "./pdf";
+import { t, language } from "./i18n";
 import { resolve } from "./locale";
 
-export interface OpcionesExport {
+export interface ExportOptions {
   theme: string;
-  size: string; // "" = el del theme
+  size: string; // "" = the theme's own
   orientation: "" | "portrait" | "landscape";
-  margen: string; // mm; "" = el del theme
-  portada: boolean | null; // null = el del theme
-  carpeta: string;
-  abrir: boolean;
+  margin: string; // mm; "" = the theme's own
+  cover: boolean | null; // null = the theme's own
+  folder: string;
+  open: boolean;
 }
 
 interface Args {
   app: App;
-  archivo: TFile;
-  titulo: string;
+  file: TFile;
+  title: string;
   bodyHTML: string;
   themes: string[];
-  inicial: OpcionesExport;
-  cargarTheme: (id: string) => Promise<Resolved>;
-  onExport: (o: OpcionesExport) => void;
+  initial: ExportOptions;
+  loadTheme: (id: string) => Promise<Resolved>;
+  onExport: (o: ExportOptions) => void;
 }
 
 /**
- * Aplica lo elegido en el modal sobre el theme, sin tocar el pack en disco.
+ * Applies what was chosen in the modal onto the theme, without touching the
+ * pack on disk.
  *
- * La usan el modal (para la vista previa) y la exportacion (para el PDF). Tiene
- * que ser LA MISMA funcion: si la vista previa y el archivo aplicaran las
- * opciones por caminos distintos, la vista previa dejaria de ser una promesa.
+ * Used by both the modal (for the preview) and the export (for the PDF). It
+ * has to be the SAME function: if the preview and the file applied the
+ * options through different paths, the preview would stop being a promise.
  */
-export function aplicarOpciones(tema: Resolved, o: OpcionesExport): Resolved {
-  const page: Page = { ...(tema.page ?? {}) };
+export function applyOptions(theme: Resolved, o: ExportOptions): Resolved {
+  const page: Page = { ...(theme.page ?? {}) };
   if (o.size) page.size = o.size;
   if (o.orientation) page.orientation = o.orientation;
-  if (o.margen && MARGEN.test(o.margen)) {
-    const m = `${o.margen}mm`;
+  if (o.margin && MARGIN_RE.test(o.margin)) {
+    const m = `${o.margin}mm`;
     page.margin = { top: m, right: m, bottom: m, left: m };
   }
-  const cover = o.portada === null ? tema.cover : { ...tema.cover, enabled: o.portada };
-  return { ...tema, page, cover };
+  const cover = o.cover === null ? theme.cover : { ...theme.cover, enabled: o.cover };
+  return { ...theme, page, cover };
 }
 
-/** Un numero en mm, y nada mas. */
-export const MARGEN = /^\d+(\.\d+)?$/;
+/** A number in mm, and nothing else. */
+export const MARGIN_RE = /^\d+(\.\d+)?$/;
 
 export class ExportModal extends Modal {
-  private o: OpcionesExport;
+  private o: ExportOptions;
   private previewEl!: HTMLIFrameElement;
-  private lienzoEl!: HTMLElement;
-  private escalaEl!: HTMLElement;
-  private cortesEl!: HTMLElement;
+  private canvasEl!: HTMLElement;
+  private scaleEl!: HTMLElement;
+  private breaksEl!: HTMLElement;
   private infoEl!: HTMLElement;
   private theme?: Resolved;
 
   constructor(private a: Args) {
     super(a.app);
-    this.o = { ...a.inicial };
+    this.o = { ...a.initial };
   }
 
   override onOpen(): void {
@@ -76,33 +77,34 @@ export class ExportModal extends Modal {
     modalEl.addClass("pressmark-modal");
     contentEl.empty();
 
-    contentEl.createEl("h2", { text: t("modal.titulo") });
+    contentEl.createEl("h2", { text: t("modal.title") });
     contentEl.createEl("p", {
-      text: this.a.archivo.path,
+      text: this.a.file.path,
       cls: "pressmark-ruta",
     });
 
     const cols = contentEl.createDiv({ cls: "pressmark-cols" });
     const form = cols.createDiv({ cls: "pressmark-form" });
-    const vista = cols.createDiv({ cls: "pressmark-vista" });
+    const previewPane = cols.createDiv({ cls: "pressmark-vista" });
 
-    // El iframe se dibuja al ANCHO REAL del papel y despues se escala. Si se
-    // lo dejara al ancho del panel, el documento se maqueta a otro ancho de
-    // columna: las lineas cortan distinto y la vista previa miente.
-    this.lienzoEl = vista.createDiv({ cls: "pressmark-lienzo" });
-    this.escalaEl = this.lienzoEl.createDiv({ cls: "pressmark-escala" });
-    this.previewEl = this.escalaEl.createEl("iframe", { cls: "pressmark-preview" });
+    // The iframe is drawn at the paper's REAL width and scaled down after. If
+    // it were left at the panel's width, the document would lay out at a
+    // different column width: lines would wrap differently and the preview
+    // would lie.
+    this.canvasEl = previewPane.createDiv({ cls: "pressmark-lienzo" });
+    this.scaleEl = this.canvasEl.createDiv({ cls: "pressmark-escala" });
+    this.previewEl = this.scaleEl.createEl("iframe", { cls: "pressmark-preview" });
     this.previewEl.setAttr("sandbox", "allow-same-origin");
-    this.cortesEl = this.escalaEl.createDiv({ cls: "pressmark-cortes" });
-    this.infoEl = vista.createDiv({ cls: "pressmark-info" });
+    this.breaksEl = this.scaleEl.createDiv({ cls: "pressmark-cortes" });
+    this.infoEl = previewPane.createDiv({ cls: "pressmark-info" });
 
-    this.formulario(form);
+    this.buildForm(form);
 
     new Setting(contentEl)
-      .addButton((b) => b.setButtonText(t("modal.cancelar")).onClick(() => this.close()))
+      .addButton((b) => b.setButtonText(t("modal.cancel")).onClick(() => this.close()))
       .addButton((b) =>
         b
-          .setButtonText(t("modal.exportar"))
+          .setButtonText(t("modal.export"))
           .setCta()
           .onClick(() => {
             this.close();
@@ -110,167 +112,167 @@ export class ExportModal extends Modal {
           }),
       );
 
-    void this.refrescar();
+    void this.refresh();
   }
 
-  private formulario(c: HTMLElement): void {
+  private buildForm(c: HTMLElement): void {
     new Setting(c)
-      .setName(t("modal.formato"))
-      .setDesc(t("modal.formatoDesc"))
+      .setName(t("modal.format"))
+      .setDesc(t("modal.formatDesc"))
       .addDropdown((d) => {
         for (const id of this.a.themes) d.addOption(id, id);
         d.setValue(this.o.theme).onChange((v) => {
           this.o.theme = v;
-          void this.refrescar();
+          void this.refresh();
         });
       });
 
-    new Setting(c).setName(t("modal.papel")).addDropdown((d) => {
-      d.addOption("", t("modal.delFormato"));
+    new Setting(c).setName(t("modal.paperSize")).addDropdown((d) => {
+      d.addOption("", t("modal.fromFormat"));
       for (const s of ["A4", "Letter", "Legal", "A5", "A3", "Tabloid"]) d.addOption(s, s);
       d.setValue(this.o.size).onChange((v) => {
         this.o.size = v;
-        void this.refrescar();
+        void this.refresh();
       });
     });
 
-    new Setting(c).setName(t("modal.orientacion")).addDropdown((d) => {
-      d.addOption("", t("modal.delFormato"));
-      d.addOption("portrait", t("modal.vertical"));
-      d.addOption("landscape", t("modal.horizontal"));
+    new Setting(c).setName(t("modal.orientation")).addDropdown((d) => {
+      d.addOption("", t("modal.fromFormat"));
+      d.addOption("portrait", t("modal.portrait"));
+      d.addOption("landscape", t("modal.landscape"));
       d.setValue(this.o.orientation).onChange((v) => {
-        this.o.orientation = v as OpcionesExport["orientation"];
-        void this.refrescar();
+        this.o.orientation = v as ExportOptions["orientation"];
+        void this.refresh();
       });
     });
 
     new Setting(c)
-      .setName(t("modal.margen"))
-      .setDesc(t("modal.margenDesc"))
+      .setName(t("modal.margin"))
+      .setDesc(t("modal.marginDesc"))
       .addText((c) =>
         c
-          .setPlaceholder(t("modal.margenPlaceholder"))
-          .setValue(this.o.margen)
+          .setPlaceholder(t("modal.marginPlaceholder"))
+          .setValue(this.o.margin)
           .onChange((v) => {
-            this.o.margen = v.trim();
-            void this.refrescar();
+            this.o.margin = v.trim();
+            void this.refresh();
           }),
       );
 
     new Setting(c)
-      .setName(t("modal.portada"))
-      .setDesc(t("modal.portadaDesc"))
+      .setName(t("modal.cover"))
+      .setDesc(t("modal.coverDesc"))
       .addDropdown((d) => {
-        d.addOption("", t("modal.delFormato"));
-        d.addOption("si", t("modal.conPortada"));
-        d.addOption("no", t("modal.sinPortada"));
-        d.setValue(this.o.portada === null ? "" : this.o.portada ? "si" : "no");
+        d.addOption("", t("modal.fromFormat"));
+        d.addOption("yes", t("modal.withCover"));
+        d.addOption("no", t("modal.withoutCover"));
+        d.setValue(this.o.cover === null ? "" : this.o.cover ? "yes" : "no");
         d.onChange((v) => {
-          this.o.portada = v === "" ? null : v === "si";
-          void this.refrescar();
+          this.o.cover = v === "" ? null : v === "yes";
+          void this.refresh();
         });
       });
 
     new Setting(c)
-      .setName(t("modal.carpeta"))
-      .setDesc(t("modal.carpetaDesc"))
+      .setName(t("modal.outputFolder"))
+      .setDesc(t("modal.outputFolderDesc"))
       .addText((c) =>
         c
-          .setPlaceholder(t("modal.carpetaPlaceholder"))
-          .setValue(this.o.carpeta)
-          .onChange((v) => (this.o.carpeta = v.trim())),
+          .setPlaceholder(t("modal.outputFolderPlaceholder"))
+          .setValue(this.o.folder)
+          .onChange((v) => (this.o.folder = v.trim())),
       );
 
     new Setting(c)
-      .setName(t("modal.abrir"))
-      .addToggle((c) => c.setValue(this.o.abrir).onChange((v) => (this.o.abrir = v)));
+      .setName(t("modal.openWhenDone"))
+      .addToggle((c) => c.setValue(this.o.open).onChange((v) => (this.o.open = v)));
   }
 
-  private async refrescar(): Promise<void> {
+  private async refresh(): Promise<void> {
     try {
-      const base = await this.a.cargarTheme(this.o.theme);
-      this.theme = aplicarOpciones(base, this.o);
+      const base = await this.a.loadTheme(this.o.theme);
+      this.theme = applyOptions(base, this.o);
     } catch (e) {
-      this.infoEl.setText(t("modal.errorFormato", { e: String(e) }));
+      this.infoEl.setText(t("modal.formatError", { e: String(e) }));
       return;
     }
-    const tema = this.theme;
+    const theme = this.theme;
 
     let w = 8.27,
       h = 11.69;
     try {
-      [w, h] = tamanoPapel(tema.page);
+      [w, h] = paperSize(theme.page);
     } catch {
-      /* se informa mas abajo */
+      /* reported further below */
     }
-    if (tema.page?.orientation === "landscape") [w, h] = [h, w];
+    if (theme.page?.orientation === "landscape") [w, h] = [h, w];
 
-    // 96 px CSS por pulgada: es la unidad en la que Chromium maqueta.
-    const anchoPx = w * 96;
-    const altoPx = h * 96;
+    // 96 CSS px per inch: the unit Chromium lays out in.
+    const widthPx = w * 96;
+    const heightPx = h * 96;
 
-    this.previewEl.style.width = `${anchoPx}px`;
-    this.previewEl.srcdoc = documentHTML(this.a.titulo, this.a.bodyHTML, tema, true);
+    this.previewEl.style.width = `${widthPx}px`;
+    this.previewEl.srcdoc = documentHTML(this.a.title, this.a.bodyHTML, theme, true);
 
     this.previewEl.onload = () => {
       const doc = this.previewEl.contentDocument;
       if (!doc) return;
-      // Alto real del documento, redondeado hacia arriba a paginas enteras:
-      // asi la ultima carilla se ve completa y no cortada al medio.
-      const alto = Math.max(doc.body.scrollHeight, altoPx);
-      const paginas = Math.max(1, Math.ceil(alto / altoPx));
-      const altoTotal = paginas * altoPx;
+      // Real document height, rounded up to whole pages: so the last page
+      // shows complete and isn't cut in half.
+      const height = Math.max(doc.body.scrollHeight, heightPx);
+      const pages = Math.max(1, Math.ceil(height / heightPx));
+      const totalHeight = pages * heightPx;
 
-      this.previewEl.style.height = `${altoTotal}px`;
-      this.escalaEl.style.width = `${anchoPx}px`;
-      this.escalaEl.style.height = `${altoTotal}px`;
+      this.previewEl.style.height = `${totalHeight}px`;
+      this.scaleEl.style.width = `${widthPx}px`;
+      this.scaleEl.style.height = `${totalHeight}px`;
 
-      // Lineas donde Chromium va a cortar. Es aproximado —el corte real
-      // depende de break-inside— pero alcanza para ver si un titulo o una
-      // tabla quedan a caballo entre dos carillas.
-      this.cortesEl.empty();
-      for (let i = 1; i < paginas; i++) {
-        const linea = this.cortesEl.createDiv({ cls: "pressmark-corte" });
-        linea.style.top = `${i * altoPx}px`;
-        linea.createSpan({ text: t("modal.carilla", { n: i + 1 }) });
+      // Lines where Chromium is going to break the page. It's approximate —
+      // the real break depends on break-inside — but it's enough to see
+      // whether a heading or a wide table ends up straddling two pages.
+      this.breaksEl.empty();
+      for (let i = 1; i < pages; i++) {
+        const line = this.breaksEl.createDiv({ cls: "pressmark-corte" });
+        line.style.top = `${i * heightPx}px`;
+        line.createSpan({ text: t("modal.page", { n: i + 1 }) });
       }
 
-      this.ajustarEscala(anchoPx);
-      this.actualizarInfo(tema, paginas);
+      this.fitScale(widthPx);
+      this.updateInfo(theme, pages);
     };
 
-    if (this.o.margen && !MARGEN.test(this.o.margen)) {
-      new Notice(t("modal.margenInvalido"));
+    if (this.o.margin && !MARGIN_RE.test(this.o.margin)) {
+      new Notice(t("modal.marginInvalid"));
     }
   }
 
-  /** Escala el lienzo para que la carilla entre a lo ancho del panel. */
-  private ajustarEscala(anchoPx: number): void {
-    const disponible = this.lienzoEl.clientWidth;
-    if (!disponible) return;
-    const f = Math.min(1, disponible / anchoPx);
-    this.escalaEl.style.transform = `scale(${f})`;
-    // Las marcas de corte viven adentro del elemento escalado, asi que se
-    // achicarian con el. Se contra-escalan con esta variable para que sigan
-    // siendo legibles a cualquier zoom.
-    this.escalaEl.style.setProperty("--pm-escala", String(f));
-    // El contenedor tiene que reservar el alto YA ESCALADO, si no el scroll
-    // queda del largo del documento sin escalar.
-    this.lienzoEl.style.height = `${Math.min(520, this.escalaEl.offsetHeight * f)}px`;
+  /** Scales the canvas so the page fits the panel's width. */
+  private fitScale(widthPx: number): void {
+    const available = this.canvasEl.clientWidth;
+    if (!available) return;
+    const f = Math.min(1, available / widthPx);
+    this.scaleEl.style.transform = `scale(${f})`;
+    // The page-break marks live inside the scaled element, so they'd shrink
+    // along with it. They're counter-scaled with this variable so they stay
+    // legible at any zoom.
+    this.scaleEl.style.setProperty("--pm-escala", String(f));
+    // The container has to reserve the height ALREADY SCALED, otherwise the
+    // scrollbar ends up as long as the unscaled document.
+    this.canvasEl.style.height = `${Math.min(520, this.scaleEl.offsetHeight * f)}px`;
   }
 
-  private actualizarInfo(theme: Resolved, paginas: number): void {
+  private updateInfo(theme: Resolved, pages: number): void {
     const m = theme.page?.margin;
-    const size = typeof theme.page?.size === "string" ? theme.page.size : t("info.propio");
-    const orient = theme.page?.orientation === "landscape" ? t("info.horizontal") : t("info.vertical");
+    const size = typeof theme.page?.size === "string" ? theme.page.size : t("info.custom");
+    const orient = theme.page?.orientation === "landscape" ? t("info.landscape") : t("info.portrait");
     this.infoEl.setText(
       [
         size,
         orient,
-        `${t("info.margenes")} ${m?.top ?? "?"} ${m?.right ?? "?"} ${m?.bottom ?? "?"} ${m?.left ?? "?"}`,
-        theme.cover?.enabled ? t("info.conPortada") : t("info.sinPortada"),
-        ...(theme.footer?.enabled ? [t("info.conPie")] : []),
-        t("info.carillas", { n: paginas }),
+        `${t("info.margins")} ${m?.top ?? "?"} ${m?.right ?? "?"} ${m?.bottom ?? "?"} ${m?.left ?? "?"}`,
+        theme.cover?.enabled ? t("info.withCover") : t("info.withoutCover"),
+        ...(theme.footer?.enabled ? [t("info.withFooter")] : []),
+        t("info.pages", { n: pages }),
       ].join(" · "),
     );
   }

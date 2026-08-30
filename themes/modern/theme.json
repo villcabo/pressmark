@@ -1,33 +1,35 @@
 {
   "$schema": "../theme.schema.json",
-  "id": "tecnico",
+  "id": "modern",
   "name": {
-    "en": "Technical",
-    "es": "Técnico"
+    "en": "Modern",
+    "es": "Moderno"
   },
   "description": {
-    "en": "Dense, graphite, half-page cover. The code leads.",
-    "es": "Denso, grafito, portada de media carilla. El código manda."
+    "en": "Inter Display, plum, soft corners. For proposals and product docs.",
+    "es": "Inter Display, ciruela, esquinas suaves. Para propuestas y producto."
   },
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
-    "acento": "#33475b",
-    "acento-tenue": "#f1f4f7",
-    "acento-medio": "#c8d3dd",
-    "tinta": "#1b2733",
-    "tenue": "#5d6b78",
-    "regla": "#d9e0e6",
-    "papel-codigo": "#f4f7f9",
-    "portada-offset": "22mm"
+    "accent": "#6b2d5c",
+    "accent-soft": "#faf3f8",
+    "accent-mid": "#ddc2d5",
+    "ink": "#241d22",
+    "muted": "#6b5f67",
+    "rule": "#e3d9e0",
+    "code-bg": "#faf7f9",
+    "notice": "#8a5a12",
+    "font-heading": "\"Inter Display\", \"Inter\", \"Segoe UI\", system-ui, sans-serif",
+    "cover-offset": "62mm"
   },
   "page": {
     "size": "A4",
     "margin": {
-      "top": "20mm",
-      "right": "16mm",
-      "bottom": "18mm",
-      "left": "16mm"
+      "top": "24mm",
+      "right": "21mm",
+      "bottom": "20mm",
+      "left": "21mm"
     },
     "printBackground": true
   },
@@ -37,29 +39,29 @@
   },
   "footer": {
     "enabled": true,
-    "left": "{{vars.confidencialidad}}",
+    "left": "{{vars.confidentiality}}",
     "right": {
       "en": "Page {{page}} of {{pages}}",
       "es": "Página {{page}} de {{pages}}"
     },
     "rule": true,
     "fontSize": "7pt",
-    "color": "#8a9499"
+    "color": "#7d928f"
   },
   "vars": {
-    "confidencialidad": {
+    "confidentiality": {
       "en": "Confidential · internal use",
       "es": "Confidencial · uso interno"
     }
   },
   "varSchema": {
-    "confidencialidad": {
+    "confidentiality": {
       "type": "text",
       "label": {
         "en": "Confidentiality notice",
         "es": "Aviso de confidencialidad"
       },
-      "group": "pie",
+      "group": "footer",
       "description": {
         "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
         "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."

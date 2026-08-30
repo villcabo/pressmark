@@ -1,13 +1,13 @@
 /**
- * Generacion del PDF con Electron.
+ * PDF generation via Electron.
  *
- * Obsidian ya ES Chromium: no hace falta bajar un navegador ni depender de un
- * binario externo. Se abre una BrowserWindow oculta, se carga el documento y se
- * llama a webContents.printToPDF — la misma API que usa el "Export to PDF"
- * propio de Obsidian.
+ * Obsidian already IS Chromium: no need to download a browser or depend on an
+ * external binary. A hidden BrowserWindow is opened, the document is loaded,
+ * and webContents.printToPDF is called — the same API Obsidian's own
+ * "Export to PDF" uses.
  *
- * Requiere isDesktopOnly: true en el manifest. La politica del store lo permite
- * con esa bandera declarada, y hay plugins publicados que lo hacen igual.
+ * Requires isDesktopOnly: true in the manifest. The store's policy allows it
+ * with that flag declared, and there are published plugins that do the same.
  */
 import { writeFile, unlink, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -18,7 +18,7 @@ export interface PrintOptions {
   landscape: boolean;
   printBackground: boolean;
   scale?: number;
-  paperWidth: number; // pulgadas
+  paperWidth: number; // inches
   paperHeight: number;
   margins: { top: number; bottom: number; left: number; right: number };
   displayHeaderFooter: boolean;
@@ -26,7 +26,7 @@ export interface PrintOptions {
   footerTemplate: string;
 }
 
-const PULGADAS_POR: Record<string, number> = {
+const PER_INCH: Record<string, number> = {
   mm: 25.4,
   cm: 2.54,
   in: 1,
@@ -35,30 +35,31 @@ const PULGADAS_POR: Record<string, number> = {
 };
 
 /**
- * printToPDF solo entiende pulgadas.
+ * printToPDF only understands inches.
  *
- * Valida el numero con una expresion regular y NO con parseFloat: parseFloat
- * corta en el primer caracter que no entiende, asi que "18 pulgadas" le da 18 y
- * se traga un valor invalido. El conversor de Go lo rechaza, y los dos tienen
- * que coincidir o el mismo theme pack da margenes distintos en cada lado.
+ * Validates the number with a regular expression and NOT with parseFloat:
+ * parseFloat stops at the first character it doesn't understand, so
+ * "18 inches" gives it 18 and swallows an invalid value. Go's converter
+ * rejects it, and the two have to agree or the same theme pack gives
+ * different margins on each side.
  */
-const NUMERO = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+const NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
-export function aPulgadas(v: string | undefined, porDefecto = 0): number {
-  if (!v) return porDefecto;
+export function toInches(v: string | undefined, fallback = 0): number {
+  if (!v) return fallback;
   const s = v.trim().toLowerCase();
-  const numero = (txt: string, por: number): number => {
+  const num = (txt: string, per: number): number => {
     const t = txt.trim();
-    if (!NUMERO.test(t)) throw new Error(`longitud invalida: "${v}"`);
-    return Number.parseFloat(t) / por;
+    if (!NUMBER_RE.test(t)) throw new Error(`invalid length: "${v}"`);
+    return Number.parseFloat(t) / per;
   };
-  for (const [u, por] of Object.entries(PULGADAS_POR)) {
-    if (s.endsWith(u)) return numero(s.slice(0, -u.length), por);
+  for (const [u, per] of Object.entries(PER_INCH)) {
+    if (s.endsWith(u)) return num(s.slice(0, -u.length), per);
   }
-  return numero(s, 96); // numero pelado = px
+  return num(s, 96); // bare number = px
 }
 
-const PAPELES: Record<string, [number, number]> = {
+const PAPERS: Record<string, [number, number]> = {
   a3: [11.69, 16.54],
   a4: [8.27, 11.69],
   a5: [5.83, 8.27],
@@ -67,19 +68,19 @@ const PAPELES: Record<string, [number, number]> = {
   tabloid: [11, 17],
 };
 
-export function tamanoPapel(page: Page | undefined): [number, number] {
+export function paperSize(page: Page | undefined): [number, number] {
   const s = page?.size;
   if (s && typeof s === "object") {
-    return [aPulgadas(s.width), aPulgadas(s.height)];
+    return [toInches(s.width), toInches(s.height)];
   }
-  const nombre = (typeof s === "string" ? s : "A4").toLowerCase();
-  const d = PAPELES[nombre];
-  if (!d) throw new Error(`tamano de papel desconocido: "${s}"`);
+  const name = (typeof s === "string" ? s : "A4").toLowerCase();
+  const d = PAPERS[name];
+  if (!d) throw new Error(`unknown paper size: "${s}"`);
   return d;
 }
 
-export function opcionesDe(t: Resolved, header: string, footer: string): PrintOptions {
-  const [w, h] = tamanoPapel(t.page);
+export function printOptionsFor(t: Resolved, header: string, footer: string): PrintOptions {
+  const [w, h] = paperSize(t.page);
   const m = t.page?.margin;
   return {
     landscape: t.page?.orientation === "landscape",
@@ -88,10 +89,10 @@ export function opcionesDe(t: Resolved, header: string, footer: string): PrintOp
     paperWidth: w,
     paperHeight: h,
     margins: {
-      top: aPulgadas(m?.top),
-      bottom: aPulgadas(m?.bottom),
-      left: aPulgadas(m?.left),
-      right: aPulgadas(m?.right),
+      top: toInches(m?.top),
+      bottom: toInches(m?.bottom),
+      left: toInches(m?.left),
+      right: toInches(m?.right),
     },
     displayHeaderFooter: Boolean(t.header?.enabled || t.footer?.enabled),
     headerTemplate: header,
@@ -100,32 +101,32 @@ export function opcionesDe(t: Resolved, header: string, footer: string): PrintOp
 }
 
 /**
- * Imprime el HTML a PDF.
+ * Prints the HTML to PDF.
  *
- * El documento se escribe a un archivo temporal y se carga con loadFile en vez
- * de pasarlo como data: URL. No es capricho: una data: URL tiene limite de
- * tamano y un documento con imagenes embebidas lo pasa sin esfuerzo.
+ * The document is written to a temp file and loaded with loadFile instead of
+ * being passed as a data: URL. That's not a whim: a data: URL has a size
+ * limit and a document with embedded images blows past it with no effort.
  */
 /**
- * Copia los bytes REALES del resultado.
+ * Copies the REAL bytes of the result.
  *
- * printToPDF devuelve un Buffer de Node, y `buffer.buffer` no devuelve sus
- * bytes: devuelve el pool entero del que Node lo saco, que suele ser mucho mas
- * grande. Escribir eso produce un PDF corrupto. Hay que recortar por
+ * printToPDF returns a Node Buffer, and `buffer.buffer` doesn't return its
+ * own bytes: it returns the entire pool it was carved from, which is usually
+ * much bigger. Writing that out produces a corrupt PDF. Has to be sliced by
  * byteOffset/byteLength.
  */
-export function bytesDe(b: Uint8Array): ArrayBuffer {
+export function bytesOf(b: Uint8Array): ArrayBuffer {
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
 }
 
-export async function generar(html: string, opts: PrintOptions): Promise<Uint8Array> {
-  // require dinamico: electron no existe en mobile, y el bundler no debe
-  // resolverlo en tiempo de build.
+export async function generate(html: string, opts: PrintOptions): Promise<Uint8Array> {
+  // Dynamic require: electron doesn't exist on mobile, and the bundler must
+  // not resolve it at build time.
   const remote = requireRemote();
 
   const dir = await mkdtemp(join(tmpdir(), "pressmark-"));
-  const archivo = join(dir, "doc.html");
-  await writeFile(archivo, html, "utf8");
+  const file = join(dir, "doc.html");
+  await writeFile(file, html, "utf8");
 
   const win = new remote.BrowserWindow({
     show: false,
@@ -133,28 +134,28 @@ export async function generar(html: string, opts: PrintOptions): Promise<Uint8Ar
   });
 
   try {
-    await win.loadFile(archivo);
-    // Sin esto una tipografia aun sin cargar imprime con la de reemplazo y el
-    // documento sale con otra metrica.
+    await win.loadFile(file);
+    // Without this, a font that hasn't loaded yet prints with the fallback
+    // and the document comes out with different metrics.
     await win.webContents.executeJavaScript("document.fonts.ready.then(() => true)", true);
     return await win.webContents.printToPDF({
       landscape: opts.landscape,
       printBackground: opts.printBackground,
       pageSize: { width: opts.paperWidth, height: opts.paperHeight },
-      // Sin marginType: esa propiedad es de contents.print(), NO de
-      // printToPDF. Aca los cuatro lados van en PULGADAS y nada mas.
+      // No marginType: that property belongs to contents.print(), NOT to
+      // printToPDF. Here all four sides go in INCHES and nothing else.
       margins: opts.margins,
       displayHeaderFooter: opts.displayHeaderFooter,
       headerTemplate: opts.headerTemplate,
       footerTemplate: opts.footerTemplate,
       ...(opts.scale ? { scale: opts.scale } : {}),
-      // Falso a proposito: el tamano lo manda theme.json, no un @page que se le
-      // haya colado al CSS. Fuente unica de verdad.
+      // False on purpose: the size comes from theme.json, not from an @page
+      // that slipped into the CSS. Single source of truth.
       preferCSSPageSize: false,
     });
   } finally {
     win.destroy();
-    await unlink(archivo).catch(() => {});
+    await unlink(file).catch(() => {});
   }
 }
 
@@ -170,18 +171,19 @@ interface Remote {
 }
 
 /**
- * Obtiene @electron/remote.
+ * Gets @electron/remote.
  *
- * Obsidian lo trae bundleado e inicializado (verificado en app.asar), pero el
- * modulo se habilita POR webContents. Si no estuviera habilitado para el
- * renderer del plugin, el error de Electron lo dice con esas palabras — por eso
- * se distingue ese caso: sin el mensaje preciso, el fallo es indiagnosticable.
+ * Obsidian ships it bundled and initialized (verified in app.asar), but the
+ * module is enabled PER webContents. If it weren't enabled for the plugin's
+ * renderer, Electron's error says so in those exact words — that's why this
+ * case is singled out: without the precise message, the failure is
+ * undiagnosable.
  */
 function requireRemote(): Remote {
   const req = (globalThis as { require?: (m: string) => unknown }).require;
   if (!req) {
     throw new Error(
-      "no hay acceso a require(): el plugin necesita el escritorio (isDesktopOnly)",
+      "no access to require(): the plugin needs the desktop app (isDesktopOnly)",
     );
   }
   let mod: Remote | undefined;
@@ -191,14 +193,14 @@ function requireRemote(): Remote {
     try {
       mod = (req("electron") as { remote?: Remote }).remote;
     } catch {
-      /* se reporta abajo con el error original */
+      /* reported below with the original error */
     }
     if (!mod) {
-      throw new Error(`no pude cargar @electron/remote: ${(e as Error).message}`);
+      throw new Error(`could not load @electron/remote: ${(e as Error).message}`);
     }
   }
   if (!mod?.BrowserWindow) {
-    throw new Error("@electron/remote cargo pero no expone BrowserWindow");
+    throw new Error("@electron/remote loaded but doesn't expose BrowserWindow");
   }
   return mod;
 }

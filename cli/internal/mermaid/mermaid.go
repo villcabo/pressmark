@@ -1,11 +1,12 @@
-// Package mermaid renderiza los bloques ```mermaid dentro de la MISMA pagina
-// que se va a imprimir.
+// Package mermaid renders ```mermaid blocks inside the SAME page that is
+// going to be printed.
 //
-// El script viejo pre-renderizaba cada diagrama con mmdc a un SVG aparte, y su
-// comentario explicaba por que: "inyectar mermaid.js no sirve, su render es
-// asincrono y Puppeteer imprime sin esperarlo". Eso era cierto del pipeline
-// cerrado de md-to-pdf, no de CDP. Manejando Chrome uno mismo se pide
-// awaitPromise y no hay carrera. Se caen mmdc, node y python3.
+// The old script pre-rendered each diagram with mmdc into a separate SVG, and
+// its comment explained why: "injecting mermaid.js doesn't work, its render is
+// asynchronous and Puppeteer prints without waiting for it". That was true of
+// the closed pipeline of md-to-pdf, not of CDP. Driving Chrome ourselves lets
+// us ask for awaitPromise and there is no race. mmdc, node and python3 are
+// gone.
 package mermaid
 
 import (
@@ -18,36 +19,38 @@ import (
 //go:embed vendor/mermaid.min.js
 var libJS string
 
-// LibJS devuelve mermaid.js embebido. El binario no baja nada de la red.
+// LibJS returns the embedded mermaid.js. The binary downloads nothing from
+// the network.
 func LibJS() string { return libJS }
 
-// Extract reemplaza cada bloque ```mermaid por un <pre class="mermaid"> con el
-// codigo del diagrama, y avisa si encontro alguno.
+// Extract replaces every ```mermaid block with a <pre class="mermaid"> holding
+// the diagram code, and reports whether it found any.
 //
-// Se hace sobre el markdown y no sobre el HTML porque el resaltador de sintaxis
-// destroza el codigo del diagrama: lo llena de <span> y mermaid ya no lo parsea.
+// This runs on the markdown, not on the HTML, because the syntax highlighter
+// mangles diagram code: it fills it with <span> and mermaid can no longer
+// parse it.
 func Extract(src []byte) ([]byte, bool) {
-	lineas := strings.Split(string(src), "\n")
+	lines := strings.Split(string(src), "\n")
 	var out []string
-	var diagrama []string
+	var diagram []string
 
-	// Estado de fence segun CommonMark: hay que recordar con que caracter y con
-	// cuantos se abrio. Un ```mermaid adentro de un bloque ~~~~ es contenido.
+	// Fence state per CommonMark: we have to remember which character opened
+	// it and how many of them. A ```mermaid inside a ~~~~ block is content.
 	var fenceChar byte
 	var fenceLen int
-	enMermaid := false
-	hubo := false
+	inMermaid := false
+	found := false
 
-	for _, l := range lineas {
-		c, n, resto := fence(l)
+	for _, l := range lines {
+		c, n, rest := fence(l)
 
 		if fenceLen == 0 {
-			// Fuera de todo bloque: esto puede abrir uno.
+			// Outside any block: this can open one.
 			if n > 0 {
 				fenceChar, fenceLen = c, n
-				if strings.TrimSpace(resto) == "mermaid" {
-					enMermaid, hubo = true, true
-					diagrama = diagrama[:0]
+				if strings.TrimSpace(rest) == "mermaid" {
+					inMermaid, found = true, true
+					diagram = diagram[:0]
 					continue
 				}
 			}
@@ -55,13 +58,13 @@ func Extract(src []byte) ([]byte, bool) {
 			continue
 		}
 
-		// Dentro de un bloque: solo cierra el mismo caracter, igual o mas largo,
-		// y sin info string.
-		if n >= fenceLen && c == fenceChar && strings.TrimSpace(resto) == "" {
-			if enMermaid {
+		// Inside a block: it only closes with the same character, equal or
+		// longer, and no info string.
+		if n >= fenceLen && c == fenceChar && strings.TrimSpace(rest) == "" {
+			if inMermaid {
 				out = append(out, `<pre class="mermaid">`+
-					html.EscapeString(strings.Join(diagrama, "\n"))+"</pre>")
-				enMermaid = false
+					html.EscapeString(strings.Join(diagram, "\n"))+"</pre>")
+				inMermaid = false
 			} else {
 				out = append(out, l)
 			}
@@ -69,23 +72,23 @@ func Extract(src []byte) ([]byte, bool) {
 			continue
 		}
 
-		if enMermaid {
-			diagrama = append(diagrama, l)
+		if inMermaid {
+			diagram = append(diagram, l)
 		} else {
 			out = append(out, l)
 		}
 	}
 
-	// Bloque sin cerrar: se devuelve tal cual, no se inventa un cierre.
-	if enMermaid {
+	// Unclosed block: returned as-is, no closing fence is invented.
+	if inMermaid {
 		out = append(out, "```mermaid")
-		out = append(out, diagrama...)
+		out = append(out, diagram...)
 	}
-	return []byte(strings.Join(out, "\n")), hubo
+	return []byte(strings.Join(out, "\n")), found
 }
 
-// fence reconoce una linea de cerca: hasta 3 espacios de sangria y 3 o mas
-// backticks o tildes. Devuelve el caracter, cuantos, y lo que sigue.
+// fence recognizes a fence line: up to 3 spaces of indentation and 3 or more
+// backticks or tildes. Returns the character, how many, and what follows.
 func fence(l string) (byte, int, string) {
 	i := 0
 	for i < len(l) && i < 4 && l[i] == ' ' {
@@ -108,15 +111,15 @@ func fence(l string) (byte, int, string) {
 	return c, j - i, l[j:]
 }
 
-// InitJS arranca mermaid con la paleta del theme y DEVUELVE UNA PROMESA.
-// Quien la llame tiene que esperarla: ahi esta todo el asunto.
-func InitJS(acento, tenue, tinta string) string {
+// InitJS starts mermaid with the theme's palette and RETURNS A PROMISE.
+// Whoever calls it has to await it: that's the whole point.
+func InitJS(accent, faint, ink string) string {
 	return fmt.Sprintf(`(async () => {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: 'strict',
     fontFamily: getComputedStyle(document.documentElement)
-                  .getPropertyValue('--fuente') || 'sans-serif',
+                  .getPropertyValue('--font') || 'sans-serif',
     theme: 'base',
     themeVariables: {
       primaryColor: %[2]q,
@@ -129,12 +132,12 @@ func InitJS(acento, tenue, tinta string) string {
     }
   });
   await mermaid.run({ querySelector: 'pre.mermaid' });
-  // Los SVG salen con width al 100%% y se desbordan en papel.
+  // SVGs come out with width at 100%% and overflow on paper.
   document.querySelectorAll('pre.mermaid svg').forEach(s => {
     s.removeAttribute('width');
     s.style.maxWidth = '100%%';
     s.style.height = 'auto';
   });
   return true;
-})()`, acento, tenue, tinta)
+})()`, accent, faint, ink)
 }

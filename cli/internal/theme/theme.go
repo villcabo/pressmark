@@ -1,8 +1,8 @@
-// Package theme carga theme packs y resuelve su herencia.
+// Package theme loads theme packs and resolves their inheritance.
 //
-// Un theme pack es una carpeta con theme.json y theme.css. La herencia se
-// resuelve clave a clave (superficial) para los objetos, y apilando el CSS:
-// primero el del padre, despues el propio.
+// A theme pack is a folder with theme.json and theme.css. Inheritance is
+// resolved key by key (shallow) for objects, and by stacking the CSS: the
+// parent's first, then its own.
 package theme
 
 import (
@@ -15,8 +15,9 @@ import (
 
 const BaseID = "_base"
 
-// Value acepta string o numero en el JSON y siempre expone string, porque al
-// emitirse como variable CSS todo termina siendo texto igual.
+// Value accepts a string or a number in the JSON and always exposes a
+// string, because once emitted as a CSS variable everything ends up being
+// text anyway.
 type Value string
 
 func (v *Value) UnmarshalJSON(b []byte) error {
@@ -30,13 +31,13 @@ func (v *Value) UnmarshalJSON(b []byte) error {
 	}
 	var f float64
 	if err := json.Unmarshal(b, &f); err != nil {
-		return fmt.Errorf("token: se esperaba string o numero, llego %s", b)
+		return fmt.Errorf("token: expected string or number, got %s", b)
 	}
 	*v = Value(strconv.FormatFloat(f, 'f', -1, 64))
 	return nil
 }
 
-// Size es A4/Letter/... o un tamano propio {width,height}.
+// Size is A4/Letter/... or a custom {width,height} size.
 type Size struct {
 	Name   string
 	Width  string
@@ -55,9 +56,9 @@ func (s *Size) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalJSON devuelve el mismo shape que entro: "A4" o {width,height}.
-// Sin esto un theme resuelto no vuelve a ser un theme.json valido, y el plugin
-// necesita justamente eso para guardar las personalizaciones del usuario.
+// MarshalJSON returns the same shape it came in as: "A4" or {width,height}.
+// Without this a resolved theme wouldn't be a valid theme.json again, and the
+// plugin needs exactly that to save the user's customizations.
 func (s Size) MarshalJSON() ([]byte, error) {
 	if s.Name != "" {
 		return json.Marshal(s.Name)
@@ -88,8 +89,9 @@ type Cover struct {
 	Break   *string `json:"break,omitempty"`
 }
 
-// Band es un encabezado o un pie. Se compone por ranuras; el margen lateral lo
-// inyecta el renderer, para que nunca haya que sincronizarlo con Page.Margin.
+// Band is a header or a footer. It's composed of slots; the side margin is
+// injected by the renderer, so it never has to be kept in sync with
+// Page.Margin.
 type Band struct {
 	Enabled  *bool      `json:"enabled,omitempty"`
 	Left     *Localized `json:"left,omitempty"`
@@ -133,7 +135,7 @@ type Theme struct {
 	Fonts       []Font               `json:"fonts,omitempty"`
 }
 
-// parent devuelve el id del padre. Ausente implica "_base"; null explicito, nada.
+// parent returns the parent's id. Absent implies "_base"; explicit null, none.
 func (t *Theme) parent() (string, bool) {
 	if len(t.Extends) == 0 {
 		return BaseID, true
@@ -145,14 +147,15 @@ func (t *Theme) parent() (string, bool) {
 	return *s, true
 }
 
-// Resolved es un theme con la cadena de herencia ya aplicada y el CSS apilado.
+// Resolved is a theme with the inheritance chain already applied and the CSS
+// stacked.
 type Resolved struct {
 	Theme
 	CSS   string
-	Chain []string // del ancestro mas lejano al propio
+	Chain []string // from the farthest ancestor to itself
 }
 
-// Load resuelve el theme id dentro de fsys, siguiendo la cadena de extends.
+// Load resolves the theme id within fsys, following the extends chain.
 func Load(fsys fs.FS, id string) (*Resolved, error) {
 	seen := map[string]bool{}
 	var chain []*Theme
@@ -160,7 +163,7 @@ func Load(fsys fs.FS, id string) (*Resolved, error) {
 
 	for cur := id; cur != ""; {
 		if seen[cur] {
-			return nil, fmt.Errorf("herencia circular de themes en %q", cur)
+			return nil, fmt.Errorf("circular theme inheritance at %q", cur)
 		}
 		seen[cur] = true
 
@@ -170,12 +173,12 @@ func Load(fsys fs.FS, id string) (*Resolved, error) {
 		}
 		var t Theme
 		if err := json.Unmarshal(raw, &t); err != nil {
-			return nil, fmt.Errorf("theme %q: theme.json invalido: %w", cur, err)
+			return nil, fmt.Errorf("theme %q: invalid theme.json: %w", cur, err)
 		}
 		if t.ID != cur {
-			return nil, fmt.Errorf("theme %q: el id declarado es %q", cur, t.ID)
+			return nil, fmt.Errorf("theme %q: declared id is %q", cur, t.ID)
 		}
-		chain = append([]*Theme{&t}, chain...) // el padre queda antes
+		chain = append([]*Theme{&t}, chain...) // the parent goes first
 
 		next, ok := t.parent()
 		if !ok {
@@ -189,7 +192,7 @@ func Load(fsys fs.FS, id string) (*Resolved, error) {
 		out.Chain = append(out.Chain, t.ID)
 		merge(&out.Theme, t)
 
-		// El CSS se apila, no se mezcla: el del padre primero.
+		// The CSS is stacked, not merged: the parent's comes first.
 		b, err := fs.ReadFile(fsys, path.Join(t.ID, "theme.css"))
 		if err != nil {
 			return nil, fmt.Errorf("theme %q: %w", t.ID, err)
@@ -201,7 +204,7 @@ func Load(fsys fs.FS, id string) (*Resolved, error) {
 	}
 	out.CSS = string(css)
 
-	// La identidad es la del theme pedido, no la del ancestro.
+	// The identity is the requested theme's, not the ancestor's.
 	last := chain[len(chain)-1]
 	out.ID, out.Name, out.Description = last.ID, last.Name, last.Description
 	out.Version, out.Author = last.Version, last.Author
@@ -302,7 +305,7 @@ func mergeBand(dst, src *Band) *Band {
 	return &out
 }
 
-// List devuelve los themes seleccionables: los que empiezan con _ son internos.
+// List returns the selectable themes: the ones starting with _ are internal.
 func List(fsys fs.FS) ([]string, error) {
 	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {

@@ -1,6 +1,6 @@
 {
   "$schema": "../theme.schema.json",
-  "id": "ejecutivo",
+  "id": "executive",
   "name": {
     "en": "Executive",
     "es": "Ejecutivo"
@@ -12,15 +12,15 @@
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
-    "acento": "#1a3a5c",
-    "acento-tenue": "#f0f4f8",
-    "acento-medio": "#c6d5e2",
-    "tinta": "#16202b",
-    "tenue": "#5b6b7c",
-    "regla": "#d5dde5",
-    "papel-codigo": "#f5f8fa",
-    "fuente-titulo": "Georgia, \"DejaVu Serif\", \"Liberation Serif\", serif",
-    "portada-offset": "72mm"
+    "accent": "#1a3a5c",
+    "accent-soft": "#f0f4f8",
+    "accent-mid": "#c6d5e2",
+    "ink": "#16202b",
+    "muted": "#5b6b7c",
+    "rule": "#d5dde5",
+    "code-bg": "#f5f8fa",
+    "font-heading": "Georgia, \"DejaVu Serif\", \"Liberation Serif\", serif",
+    "cover-offset": "72mm"
   },
   "page": {
     "size": "A4",
@@ -38,7 +38,7 @@
   },
   "footer": {
     "enabled": true,
-    "left": "{{vars.confidencialidad}}",
+    "left": "{{vars.confidentiality}}",
     "right": {
       "en": "Page {{page}} of {{pages}}",
       "es": "Página {{page}} de {{pages}}"
@@ -48,19 +48,19 @@
     "color": "#7c8b99"
   },
   "vars": {
-    "confidencialidad": {
+    "confidentiality": {
       "en": "Confidential · internal use",
       "es": "Confidencial · uso interno"
     }
   },
   "varSchema": {
-    "confidencialidad": {
+    "confidentiality": {
       "type": "text",
       "label": {
         "en": "Confidentiality notice",
         "es": "Aviso de confidencialidad"
       },
-      "group": "pie",
+      "group": "footer",
       "description": {
         "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
         "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."

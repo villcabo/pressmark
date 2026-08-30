@@ -1,8 +1,9 @@
-// pressmark convierte Markdown a PDF aplicando un theme pack.
+// pressmark converts Markdown to PDF applying a theme pack.
 //
-// El motor de maquetado es Chrome. Este binario no renderiza: lo maneja por
-// CDP. Es una diferencia importante — ningun paquete de Go sabe maquetar CSS
-// para impresion, y pretender lo contrario significaria tirar los themes.
+// The layout engine is Chrome. This binary doesn't render: it drives Chrome
+// over CDP. That's an important distinction — no Go package knows how to lay
+// out CSS for print, and pretending otherwise would mean throwing away the
+// themes.
 package main
 
 import (
@@ -24,52 +25,53 @@ import (
 	"github.com/villcabo/pressmark/cli/internal/themes"
 )
 
-const uso = `pressmark — convierte Markdown a PDF con un theme pack
+const usage = `pressmark — converts Markdown to PDF using a theme pack
 
-  El PDF se guarda al lado del .md, con el mismo nombre.
+  The PDF is saved next to the .md file, with the same name.
 
-USO
-  pressmark <archivo.md | carpeta | *.md> [opciones]
+USAGE
+  pressmark <file.md | folder | *.md> [options]
 
-OPCIONES
-  -e, --estilo <id>    Theme pack a aplicar (por defecto: informe)
-      --carta          Tamano carta (por defecto: el del theme)
-      --a4             Fuerza A4
-      --margen <mm>    Margen parejo en milimetros, pisa al del theme
-      --html           Genera el HTML intermedio en vez del PDF
-  -o, --salida <ruta>  Archivo de salida (solo con un archivo de entrada)
-      --temas <dir>    Directorio de theme packs propios
-      --chrome <ruta>  Ejecutable de Chrome a usar
-  -l, --listar         Lista los theme packs disponibles
-      --idioma <cod>   Idioma de los textos del formato (es, en, pt-BR...).
-                       Por defecto sale de LANG.
-  -h, --ayuda          Esta ayuda
+OPTIONS
+  -t, --theme <id>      Theme pack to apply (default: report)
+      --letter          Letter size (default: the theme's)
+      --a4              Force A4
+      --margin <mm>     Uniform margin in millimeters, overrides the theme's
+      --html            Generate the intermediate HTML instead of the PDF
+  -o, --output <path>   Output file (only valid with a single input file)
+      --themes <dir>    Directory of custom theme packs
+      --chrome <path>   Chrome executable to use
+  -l, --list            List the available theme packs
+      --lang <code>     Language for the format's text (es, en, pt-BR...).
+                         Defaults from LANG.
+  -h, --help            This help
 
 THEME PACKS
-  Se buscan primero en --temas (o ~/.config/pressmark/themes) y despues entre
-  los que vienen dentro del binario. Un theme propio puede heredar de uno
-  embebido: extends "_base" funciona aunque _base no este en tu disco.
+  These are looked up first in --themes (or ~/.config/pressmark/themes) and
+  then among the ones bundled inside the binary. A custom theme can inherit
+  from an embedded one: extends "_base" works even if _base isn't on disk.
 `
 
-type opciones struct {
-	estilo   string
-	salida   string
-	temasD   string
-	chrome   string
-	margen   float64
-	carta    bool
-	a4       bool
-	soloHTML bool
-	listar   bool
-	idioma   string
+type options struct {
+	theme     string
+	output    string
+	themesDir string
+	chrome    string
+	margin    float64
+	letter    bool
+	a4        bool
+	htmlOnly  bool
+	list      bool
+	lang      string
 }
 
-// idiomaDelEntorno lee LANG/LC_ALL y devuelve algo como "es" o "pt-BR".
+// langFromEnv reads LANG/LC_ALL and returns something like "es" or "pt-BR".
 //
-// El CLI no tiene una app que le diga el idioma como el plugin, asi que se mira
-// el entorno. LANG suele venir "es_BO.UTF-8": hay que quedarse con la parte del
-// idioma y pasar el guion bajo a guion.
-func idiomaDelEntorno() string {
+// The CLI doesn't have an app to tell it the language like the plugin does,
+// so it looks at the environment instead. LANG usually comes as
+// "es_BO.UTF-8": we need to keep just the language part and turn the
+// underscore into a hyphen.
+func langFromEnv() string {
 	for _, v := range []string{os.Getenv("LC_ALL"), os.Getenv("LC_MESSAGES"), os.Getenv("LANG")} {
 		v = strings.TrimSpace(v)
 		if v == "" || v == "C" || v == "POSIX" {
@@ -84,75 +86,74 @@ func idiomaDelEntorno() string {
 }
 
 func main() {
-	if err := ejecutar(); err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "pressmark:", err)
 		os.Exit(1)
 	}
 }
 
-func ejecutar() error {
-	var o opciones
+func run() error {
+	var o options
 	fs_ := flag.NewFlagSet("pressmark", flag.ContinueOnError)
 	fs_.SetOutput(os.Stderr)
-	fs_.Usage = func() { fmt.Fprint(os.Stderr, uso) }
+	fs_.Usage = func() { fmt.Fprint(os.Stderr, usage) }
 
-	fs_.StringVar(&o.estilo, "estilo", "informe", "")
-	fs_.StringVar(&o.estilo, "e", "informe", "")
-	fs_.StringVar(&o.salida, "salida", "", "")
-	fs_.StringVar(&o.salida, "o", "", "")
-	fs_.StringVar(&o.temasD, "temas", "", "")
+	fs_.StringVar(&o.theme, "theme", "report", "")
+	fs_.StringVar(&o.theme, "t", "report", "")
+	fs_.StringVar(&o.output, "output", "", "")
+	fs_.StringVar(&o.output, "o", "", "")
+	fs_.StringVar(&o.themesDir, "themes", "", "")
 	fs_.StringVar(&o.chrome, "chrome", "", "")
-	fs_.Float64Var(&o.margen, "margen", 0, "")
-	fs_.BoolVar(&o.carta, "carta", false, "")
+	fs_.Float64Var(&o.margin, "margin", 0, "")
+	fs_.BoolVar(&o.letter, "letter", false, "")
 	fs_.BoolVar(&o.a4, "a4", false, "")
-	fs_.BoolVar(&o.soloHTML, "html", false, "")
-	fs_.BoolVar(&o.listar, "listar", false, "")
-	fs_.BoolVar(&o.listar, "l", false, "")
-	fs_.StringVar(&o.idioma, "idioma", "", "")
-	fs_.StringVar(&o.idioma, "lang", "", "")
+	fs_.BoolVar(&o.htmlOnly, "html", false, "")
+	fs_.BoolVar(&o.list, "list", false, "")
+	fs_.BoolVar(&o.list, "l", false, "")
+	fs_.StringVar(&o.lang, "lang", "", "")
 
-	if err := fs_.Parse(reordenar(fs_, os.Args[1:])); err != nil {
+	if err := fs_.Parse(reorderArgs(fs_, os.Args[1:])); err != nil {
 		return err
 	}
 
-	if o.idioma == "" {
-		o.idioma = idiomaDelEntorno()
+	if o.lang == "" {
+		o.lang = langFromEnv()
 	}
-	packs := theme.Overlay(theme.UserDir(o.temasD), themes.FS())
+	packs := theme.Overlay(theme.UserDir(o.themesDir), themes.FS())
 
-	if o.listar {
-		return listar(packs, o.idioma)
+	if o.list {
+		return listThemes(packs, o.lang)
 	}
-	entradas, err := expandir(fs_.Args())
+	inputs, err := expand(fs_.Args())
 	if err != nil {
 		return err
 	}
-	if len(entradas) == 0 {
-		fmt.Fprint(os.Stderr, uso)
-		return fmt.Errorf("no me diste ningun archivo .md")
+	if len(inputs) == 0 {
+		fmt.Fprint(os.Stderr, usage)
+		return fmt.Errorf("no .md files given")
 	}
-	if o.salida != "" && len(entradas) > 1 {
-		return fmt.Errorf("--salida solo vale con un archivo de entrada, y me diste %d", len(entradas))
+	if o.output != "" && len(inputs) > 1 {
+		return fmt.Errorf("--output only works with a single input file, but got %d", len(inputs))
 	}
 
-	t, err := theme.Load(packs, o.estilo)
+	t, err := theme.Load(packs, o.theme)
 	if err != nil {
-		disponibles, _ := theme.List(packs)
-		return fmt.Errorf("%w\n  themes disponibles: %s", err, strings.Join(disponibles, ", "))
+		available, _ := theme.List(packs)
+		return fmt.Errorf("%w\n  available themes: %s", err, strings.Join(available, ", "))
 	}
 
-	return convertir(entradas, t, o)
+	return convert(inputs, t, o)
 }
 
-// reordenar adelanta los flags y manda los archivos al final.
+// reorderArgs moves flags to the front and sends the files to the end.
 //
-// El paquete flag corta el parseo en el primer argumento posicional, asi que
-// `pressmark informe.md --estilo nota` le llega como tres archivos. El script de
-// bash que esto reemplaza aceptaba flags en cualquier posicion, y romper esa
-// ergonomia solo para no escribir esta funcion no vale la pena.
-func reordenar(fset *flag.FlagSet, args []string) []string {
-	esBool := func(nombre string) bool {
-		f := fset.Lookup(strings.TrimLeft(nombre, "-"))
+// The flag package stops parsing at the first positional argument, so
+// `pressmark report.md --theme note` would arrive as three files. The bash
+// script this replaces accepted flags in any position, and breaking that
+// ergonomics just to avoid writing this function isn't worth it.
+func reorderArgs(fset *flag.FlagSet, args []string) []string {
+	isBool := func(name string) bool {
+		f := fset.Lookup(strings.TrimLeft(name, "-"))
 		if f == nil {
 			return false
 		}
@@ -160,28 +161,28 @@ func reordenar(fset *flag.FlagSet, args []string) []string {
 		return ok && b.IsBoolFlag()
 	}
 
-	var flags, sueltos []string
+	var flags, positional []string
 	for i := 0; i < len(args); i++ {
 		a := args[i]
-		if a == "--" { // todo lo que sigue es archivo, aunque parezca flag
-			sueltos = append(sueltos, args[i+1:]...)
+		if a == "--" { // everything after this is a file, even if it looks like a flag
+			positional = append(positional, args[i+1:]...)
 			break
 		}
 		if !strings.HasPrefix(a, "-") || a == "-" {
-			sueltos = append(sueltos, a)
+			positional = append(positional, a)
 			continue
 		}
 		flags = append(flags, a)
-		// --flag=valor ya trae el valor pegado; --flag valor se lo lleva del siguiente
-		if !strings.Contains(a, "=") && !esBool(a) && i+1 < len(args) {
+		// --flag=value already carries the value; --flag value grabs the next one
+		if !strings.Contains(a, "=") && !isBool(a) && i+1 < len(args) {
 			i++
 			flags = append(flags, args[i])
 		}
 	}
-	return append(flags, sueltos...)
+	return append(flags, positional...)
 }
 
-func listar(packs fs.FS, locale string) error {
+func listThemes(packs fs.FS, locale string) error {
 	ids, err := theme.List(packs)
 	if err != nil {
 		return err
@@ -190,24 +191,24 @@ func listar(packs fs.FS, locale string) error {
 	for _, id := range ids {
 		t, err := theme.Load(packs, id)
 		if err != nil {
-			fmt.Printf("  %-12s (no carga: %v)\n", id, err)
+			fmt.Printf("  %-12s (won't load: %v)\n", id, err)
 			continue
 		}
-		portada := "sin portada"
+		cover := "no cover"
 		if t.Cover != nil && t.Cover.Enabled != nil && *t.Cover.Enabled {
-			portada = "con portada"
+			cover = "with cover"
 		}
-		fmt.Printf("  %-12s %-13s %s\n", id, portada, t.Description.Resolve(locale))
+		fmt.Printf("  %-12s %-13s %s\n", id, cover, t.Description.Resolve(locale))
 	}
 	return nil
 }
 
-func expandir(args []string) ([]string, error) {
+func expand(args []string) ([]string, error) {
 	var out []string
 	for _, a := range args {
 		st, err := os.Stat(a)
 		if err != nil {
-			return nil, fmt.Errorf("no existe %q", a)
+			return nil, fmt.Errorf("no such file: %q", a)
 		}
 		if !st.IsDir() {
 			out = append(out, a)
@@ -227,15 +228,15 @@ func expandir(args []string) ([]string, error) {
 	return out, nil
 }
 
-func convertir(entradas []string, t *theme.Resolved, o opciones) error {
+func convert(inputs []string, t *theme.Resolved, o options) error {
 	opts, err := pdfOptions(t, o)
 	if err != nil {
 		return err
 	}
 
 	var chrome *browser.Chrome
-	if !o.soloHTML {
-		// Un solo Chrome para todos los archivos, no uno por archivo.
+	if !o.htmlOnly {
+		// A single Chrome for all files, not one per file.
 		chrome, err = browser.New(context.Background(), o.chrome)
 		if err != nil {
 			return err
@@ -243,19 +244,21 @@ func convertir(entradas []string, t *theme.Resolved, o opciones) error {
 		defer chrome.Close()
 	}
 
-	for _, in := range entradas {
+	for _, in := range inputs {
 		src, err := os.ReadFile(in)
 		if err != nil {
 			return err
 		}
-		// El frontmatter se saca ANTES de todo: su `---` de apertura seria el
-		// primer <hr> del documento y dispararia el salto de portada ahi.
+		// The frontmatter is stripped BEFORE anything else: its opening `---`
+		// would be the document's first <hr> and would trigger the cover
+		// break right there.
 		fm, src := render.SplitFrontmatter(src)
-		titulo := render.TitleFrom(fm, src, strings.TrimSuffix(filepath.Base(in), filepath.Ext(in)))
+		title := render.TitleFrom(fm, src, strings.TrimSuffix(filepath.Base(in), filepath.Ext(in)))
 
-		// Los diagramas se sacan ANTES del resaltador: si pasan por chroma
-		// vuelven llenos de <span> y mermaid ya no los parsea.
-		src, hayDiagramas := mermaid.Extract(src)
+		// Diagrams are extracted BEFORE the highlighter: if they go through
+		// chroma they come out full of <span> and mermaid can no longer
+		// parse them.
+		src, hasDiagrams := mermaid.Extract(src)
 
 		hl := ""
 		if t.Highlight != nil {
@@ -265,41 +268,41 @@ func convertir(entradas []string, t *theme.Resolved, o opciones) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", in, err)
 		}
-		rdoc := render.Doc{Title: titulo, Body: body, Theme: t}
-		if hayDiagramas && !o.soloHTML {
+		rdoc := render.Doc{Title: title, Body: body, Lang: o.lang, Theme: t}
+		if hasDiagrams && !o.htmlOnly {
 			rdoc.ScriptJS = mermaid.LibJS()
 		}
 		doc := render.HTML(rdoc)
 
-		ext, datos := ".pdf", []byte(nil)
-		if o.soloHTML {
-			ext, datos = ".html", doc
+		ext, data := ".pdf", []byte(nil)
+		if o.htmlOnly {
+			ext, data = ".html", doc
 		} else {
 			op := opts
-			vars := render.MergeVars(t.Vars, fm, o.idioma)
-			op.Header = browser.BandOrEmpty(render.BandHTML(t.Header, marginOf(t), vars, titulo, o.idioma))
-			op.Footer = browser.BandOrEmpty(render.BandHTML(t.Footer, marginOf(t), vars, titulo, o.idioma))
+			vars := render.MergeVars(t.Vars, fm, o.lang)
+			op.Header = browser.BandOrEmpty(render.BandHTML(t.Header, marginOf(t), vars, title, o.lang))
+			op.Footer = browser.BandOrEmpty(render.BandHTML(t.Footer, marginOf(t), vars, title, o.lang))
 			op.ShowBands = enabled(t.Header) || enabled(t.Footer)
-			var pasos []browser.Prep
-			if hayDiagramas {
-				pasos = append(pasos, func(*browser.PDFOptions) chromedp.Action {
+			var steps []browser.Prep
+			if hasDiagrams {
+				steps = append(steps, func(*browser.PDFOptions) chromedp.Action {
 					return browser.AwaitJS(mermaid.InitJS(
-						tok(t, "acento", "#1e4d3b"),
-						tok(t, "acento-tenue", "#f2f7f4"),
-						tok(t, "tinta", "#16222b")))
+						token(t, "accent", "#1e4d3b"),
+						token(t, "accent-soft", "#f2f7f4"),
+						token(t, "ink", "#16222b")))
 				})
 			}
-			datos, err = chrome.PDF(doc, filepath.Dir(in), op, pasos...)
+			data, err = chrome.PDF(doc, filepath.Dir(in), op, steps...)
 			if err != nil {
 				return fmt.Errorf("%s: %w", in, err)
 			}
 		}
 
-		out := o.salida
+		out := o.output
 		if out == "" {
 			out = strings.TrimSuffix(in, filepath.Ext(in)) + ext
 		}
-		if err := os.WriteFile(out, datos, 0o644); err != nil {
+		if err := os.WriteFile(out, data, 0o644); err != nil {
 			return err
 		}
 		st, _ := os.Stat(out)
@@ -308,13 +311,14 @@ func convertir(entradas []string, t *theme.Resolved, o opciones) error {
 	return nil
 }
 
-// tok lee un design token del theme resuelto. Los diagramas toman la paleta del
-// documento: si no, el flowchart desentona con todo lo que lo rodea.
-func tok(t *theme.Resolved, nombre, porDefecto string) string {
-	if v, ok := t.Tokens[nombre]; ok && v != "" {
+// token reads a design token from the resolved theme. Diagrams pick up the
+// document's palette: otherwise the flowchart clashes with everything around
+// it.
+func token(t *theme.Resolved, name, fallback string) string {
+	if v, ok := t.Tokens[name]; ok && v != "" {
 		return string(v)
 	}
-	return porDefecto
+	return fallback
 }
 
 func enabled(b *theme.Band) bool {
@@ -328,14 +332,14 @@ func marginOf(t *theme.Resolved) *theme.Margin {
 	return t.Page.Margin
 }
 
-func pdfOptions(t *theme.Resolved, o opciones) (browser.PDFOptions, error) {
+func pdfOptions(t *theme.Resolved, o options) (browser.PDFOptions, error) {
 	var out browser.PDFOptions
 	out.Background = true
 
-	nombre := "A4"
+	name := "A4"
 	if t.Page != nil && t.Page.Size != nil {
 		if t.Page.Size.Name != "" {
-			nombre = t.Page.Size.Name
+			name = t.Page.Size.Name
 		} else {
 			w, err := render.ToInches(t.Page.Size.Width)
 			if err != nil {
@@ -349,13 +353,13 @@ func pdfOptions(t *theme.Resolved, o opciones) (browser.PDFOptions, error) {
 		}
 	}
 	switch {
-	case o.carta:
-		nombre = "Letter"
+	case o.letter:
+		name = "Letter"
 	case o.a4:
-		nombre = "A4"
+		name = "A4"
 	}
 	if out.PaperWidth == 0 {
-		w, h, err := render.PaperSize(nombre)
+		w, h, err := render.PaperSize(name)
 		if err != nil {
 			return out, err
 		}
@@ -397,8 +401,8 @@ func pdfOptions(t *theme.Resolved, o opciones) (browser.PDFOptions, error) {
 		*l.dst = in
 	}
 
-	if o.margen > 0 {
-		in := o.margen / 25.4
+	if o.margin > 0 {
+		in := o.margin / 25.4
 		out.MarginTop, out.MarginRight, out.MarginBottom, out.MarginLeft = in, in, in, in
 	}
 	return out, nil

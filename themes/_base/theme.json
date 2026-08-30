@@ -13,24 +13,24 @@
   "extends": null,
   "highlight": "github",
   "tokens": {
-    "acento": "#1e4d3b",
-    "acento-tenue": "#f2f7f4",
-    "acento-medio": "#cfe0d7",
-    "tinta": "#16222b",
-    "tenue": "#5a6b74",
-    "regla": "#dbe3e0",
-    "papel-codigo": "#f4f7f5",
-    "aviso": "#8a5a12",
-    "aviso-fondo": "#fdfaf3",
-    "fuente": "\"Inter\", \"Segoe UI\", \"DejaVu Sans\", \"Liberation Sans\", system-ui, sans-serif",
-    "fuente-mono": "\"JetBrains Mono\", \"DejaVu Sans Mono\", \"Liberation Mono\", monospace",
-    "fuente-titulo": "var(--fuente)",
-    "portada-offset": "50mm"
+    "accent": "#1e4d3b",
+    "accent-soft": "#f2f7f4",
+    "accent-mid": "#cfe0d7",
+    "ink": "#16222b",
+    "muted": "#5a6b74",
+    "rule": "#dbe3e0",
+    "code-bg": "#f4f7f5",
+    "notice": "#8a5a12",
+    "notice-bg": "#fdfaf3",
+    "font": "\"Inter\", \"Segoe UI\", \"DejaVu Sans\", \"Liberation Sans\", system-ui, sans-serif",
+    "font-mono": "\"JetBrains Mono\", \"DejaVu Sans Mono\", \"Liberation Mono\", monospace",
+    "font-heading": "var(--font)",
+    "cover-offset": "50mm"
   },
   "tokenSchema": {
-    "acento": {
+    "accent": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Accent",
         "es": "Acento"
@@ -40,9 +40,9 @@
         "es": "Títulos, reglas de tabla y énfasis. Es el color con el que se identifica el documento. En _base es el verde de contabilidad."
       }
     },
-    "acento-tenue": {
+    "accent-soft": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Soft accent",
         "es": "Acento tenue"
@@ -52,9 +52,9 @@
         "es": "Fondo de citas y avisos. Debe ser casi blanco: si pesa, el documento parece un formulario."
       }
     },
-    "acento-medio": {
+    "accent-mid": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Mid accent",
         "es": "Acento medio"
@@ -64,9 +64,9 @@
         "es": "Bordes y separadores derivados del acento."
       }
     },
-    "tinta": {
+    "ink": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Ink",
         "es": "Tinta"
@@ -76,9 +76,9 @@
         "es": "Color del texto. Nunca negro puro: en papel el negro absoluto endurece la lectura."
       }
     },
-    "tenue": {
+    "muted": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Muted text",
         "es": "Texto tenue"
@@ -88,9 +88,9 @@
         "es": "Metadata, pies de tabla, texto secundario."
       }
     },
-    "regla": {
+    "rule": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Rules",
         "es": "Reglas"
@@ -100,17 +100,17 @@
         "es": "Líneas finas de separación."
       }
     },
-    "papel-codigo": {
+    "code-bg": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Code background",
         "es": "Fondo de código"
       }
     },
-    "aviso": {
+    "notice": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Notice",
         "es": "Aviso"
@@ -120,17 +120,17 @@
         "es": "Ocre quemado, no naranja de alerta web: el documento es impreso, no una interfaz."
       }
     },
-    "aviso-fondo": {
+    "notice-bg": {
       "type": "color",
-      "group": "paleta",
+      "group": "palette",
       "label": {
         "en": "Notice background",
         "es": "Fondo de aviso"
       }
     },
-    "fuente": {
+    "font": {
       "type": "font-stack",
-      "group": "tipografia",
+      "group": "typography",
       "label": {
         "en": "Body",
         "es": "Texto"
@@ -140,17 +140,17 @@
         "es": "Pila completa con alternativas: el PDF se genera en máquinas donde la primera puede no estar."
       }
     },
-    "fuente-mono": {
+    "font-mono": {
       "type": "font-stack",
-      "group": "tipografia",
+      "group": "typography",
       "label": {
         "en": "Monospace",
         "es": "Monoespaciada"
       }
     },
-    "fuente-titulo": {
+    "font-heading": {
       "type": "font-stack",
-      "group": "tipografia",
+      "group": "typography",
       "label": {
         "en": "Headings",
         "es": "Títulos"
@@ -160,9 +160,9 @@
         "es": "Por defecto hereda de la fuente de texto."
       }
     },
-    "portada-offset": {
+    "cover-offset": {
       "type": "length",
-      "group": "portada",
+      "group": "cover",
       "label": {
         "en": "Cover height",
         "es": "Alto de portada"

@@ -1,9 +1,10 @@
 /**
- * pressmark — exporta notas a PDF usando theme packs portables.
+ * pressmark — exports notes to PDF using portable theme packs.
  *
- * El motor de maquetado es Chromium, igual que en el CLI. La diferencia es
- * quien lo maneja: aca es el Electron que Obsidian ya trae. Lo que NO cambia es
- * el theme pack, y por eso el mismo pack da el mismo PDF en los dos lados.
+ * The layout engine is Chromium, same as in the CLI. What's different is who
+ * drives it: here it's the Electron that Obsidian already ships with. What
+ * does NOT change is the theme pack, and that's why the same pack gives the
+ * same PDF on both sides.
  */
 import {
   Component,
@@ -13,244 +14,249 @@ import {
   normalizePath,
 } from "obsidian";
 import { load, type Resolved, type ThemeFS } from "./theme";
-import { embeddedFS, overlay, vaultFS, CARPETA_USUARIO } from "./sources";
+import { embeddedFS, overlay, vaultFS, USER_THEMES_FOLDER } from "./sources";
 import {
   bandHTML,
   documentHTML,
   mergeVars,
   renderBody,
   splitFrontmatter,
-  tituloDesde,
+  titleFor,
 } from "./render";
-import { bytesDe, generar, opcionesDe } from "./pdf";
-import { aplicarOpciones, ExportModal, type OpcionesExport } from "./export-modal";
+import { bytesOf, generate, printOptionsFor } from "./pdf";
+import { applyOptions, ExportModal, type ExportOptions } from "./export-modal";
 import {
-  AJUSTES_POR_DEFECTO,
-  PantallaAjustes,
-  type Ajustes,
+  DEFAULT_SETTINGS,
+  SettingsTab,
+  type Settings,
 } from "./settings";
-import { iniciarIdioma, idioma, t } from "./i18n";
+import { migrateSettings } from "./migrate";
+import { initLanguage, language, t } from "./i18n";
 
 export default class PressmarkPlugin extends Plugin {
-  ajustes: Ajustes = { ...AJUSTES_POR_DEFECTO };
+  override settings: Settings = { ...DEFAULT_SETTINGS };
   private packs!: ThemeFS;
-  /** Frontmatter de la nota que esta en el modal, para {{fm.clave}} en las bandas. */
+  /** Frontmatter of the note open in the modal, for {{fm.field}} in the bands. */
   private fm: Record<string, string> | null = null;
 
   override async onload(): Promise<void> {
-    // Se resuelve una sola vez: la UI y los theme packs tienen que usar el
-    // MISMO idioma, o el modal sale en uno y el pie del PDF en otro.
-    iniciarIdioma();
-    await this.cargarAjustes();
-    // Los del usuario ganan; los embebidos son el piso. La herencia cruza las
-    // dos capas: un theme propio hereda de _base, que viaja en el plugin.
+    // Resolved once: the UI and the theme packs HAVE to use the SAME
+    // language, or the modal comes out in one and the PDF footer in another.
+    initLanguage();
+    await this.loadSettings();
+    // The user's own packs win; the embedded ones are the floor.
+    // Inheritance crosses both layers: a user's own theme extends _base,
+    // which ships inside the plugin.
     this.packs = overlay(vaultFS(this.app.vault), embeddedFS());
 
-    this.addSettingTab(new PantallaAjustes(this.app, this));
+    this.addSettingTab(new SettingsTab(this.app, this));
 
     this.addRibbonIcon("file-output", t("ribbon"), () => {
-      void this.exportarActual();
+      void this.exportActive();
     });
 
     this.addCommand({
       id: "export-pdf",
-      name: t("cmd.exportar"),
+      name: t("cmd.export"),
       checkCallback: (checking) => {
         const f = this.app.workspace.getActiveFile();
         if (!f || f.extension !== "md") return false;
-        if (!checking) void this.exportarActual();
+        if (!checking) void this.exportActive();
         return true;
       },
     });
 
-    // Para quien ya sabe lo que quiere y no necesita ver el modal cada vez.
+    // For whoever already knows what they want and doesn't need to see the
+    // modal every time.
     this.addCommand({
       id: "export-pdf-quick",
-      name: t("cmd.exportarRapido"),
+      name: t("cmd.exportQuick"),
       checkCallback: (checking) => {
         const f = this.app.workspace.getActiveFile();
         if (!f || f.extension !== "md") return false;
-        if (!checking) void this.exportar(f, this.opcionesGuardadas());
+        if (!checking) void this.export(f, this.savedOptions());
         return true;
       },
     });
 
     this.registerEvent(
-      this.app.workspace.on("file-menu", (menu, archivo) => {
-        if (!(archivo instanceof TFile) || archivo.extension !== "md") return;
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (!(file instanceof TFile) || file.extension !== "md") return;
         menu.addItem((i) =>
           i
-            .setTitle(t("menu.exportar"))
+            .setTitle(t("menu.export"))
             .setIcon("file-output")
-            .onClick(() => void this.abrirModal(archivo)),
+            .onClick(() => void this.openModal(file)),
         );
       }),
     );
   }
 
-  async cargarAjustes(): Promise<void> {
-    this.ajustes = Object.assign({}, AJUSTES_POR_DEFECTO, await this.loadData());
+  async loadSettings(): Promise<void> {
+    const stored = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = migrateSettings(stored);
   }
 
-  async guardarAjustes(): Promise<void> {
-    await this.saveData(this.ajustes);
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
   }
 
-  async themesDisponibles(): Promise<string[]> {
+  async availableThemes(): Promise<string[]> {
     const ids = (await this.packs.list?.()) ?? [];
     return ids.filter((i) => !i.startsWith("_")).sort();
   }
 
   /**
-   * Carga el theme y le aplica los overrides del usuario.
+   * Loads the theme and applies the user's overrides to it.
    *
-   * Los overrides pisan tokens y vars, nunca el CSS: por eso personalizar no
-   * rompe el theme pack y siempre se puede volver al original.
+   * Overrides override tokens and vars, never the CSS: that's why
+   * customizing doesn't break the theme pack and you can always go back to
+   * the original.
    *
-   * Un override de var reemplaza el valor localizado por una cadena suelta, y
-   * esta bien que asi sea: si el usuario escribio su propio texto, ese texto es
-   * el que quiere ver, no una traduccion.
+   * A var override replaces the localized value with a plain string, and
+   * that's the right call: if the user wrote their own text, that text is
+   * what they want to see, not a translation.
    *
-   * Precedencia final del valor de una var, de mayor a menor:
-   *   frontmatter de la nota  >  este override  >  el theme pack
+   * Final precedence of a var's value, highest to lowest:
+   *   the note's frontmatter  >  this override  >  the theme pack
    */
-  async cargarTheme(id: string): Promise<Resolved> {
+  async loadTheme(id: string): Promise<Resolved> {
     const t = await load(this.packs, id);
 
-    const ot = this.ajustes.overrides[id];
+    const ot = this.settings.overrides[id];
     if (ot && Object.keys(ot).length > 0) {
       t.tokens = { ...(t.tokens ?? {}), ...ot };
     }
-    const ov = this.ajustes.overridesVars[id];
+    const ov = this.settings.overridesVars[id];
     if (ov && Object.keys(ov).length > 0) {
       t.vars = { ...(t.vars ?? {}), ...ov };
     }
     return t;
   }
 
-  private async exportarActual(): Promise<void> {
+  private async exportActive(): Promise<void> {
     const f = this.app.workspace.getActiveFile();
     if (!f || f.extension !== "md") {
-      new Notice(t("notice.abriNota"));
+      new Notice(t("notice.openNote"));
       return;
     }
-    await this.abrirModal(f);
+    await this.openModal(f);
   }
 
-  private opcionesGuardadas(): OpcionesExport {
+  private savedOptions(): ExportOptions {
     return {
-      theme: this.ajustes.theme,
+      theme: this.settings.theme,
       size: "",
       orientation: "",
-      margen: "",
-      portada: null,
-      carpeta: this.ajustes.carpetaSalida,
-      abrir: this.ajustes.abrirAlTerminar,
+      margin: "",
+      cover: null,
+      folder: this.settings.outputFolder,
+      open: this.settings.openWhenDone,
     };
   }
 
   /**
-   * Abre el modal de exportacion.
+   * Opens the export modal.
    *
-   * El cuerpo se renderiza UNA vez y se le pasa al modal ya hecho: cambiar de
-   * formato ahi solo reenvuelve ese HTML con otro CSS. Volver a pedirle al
-   * renderer de Obsidian que rehaga el markdown en cada cambio haria que la
-   * vista previa se sienta lenta sin ninguna razon.
+   * The body is rendered ONCE and handed to the modal already built:
+   * switching formats there just rewraps that same HTML with different CSS.
+   * Asking Obsidian's renderer to redo the markdown on every change would
+   * make the preview feel slow for no reason.
    */
-  async abrirModal(archivo: TFile): Promise<void> {
+  async openModal(file: TFile): Promise<void> {
     const comp = new Component();
     comp.load();
     try {
-      const crudo = await this.app.vault.cachedRead(archivo);
-      const { campos, cuerpo: md } = splitFrontmatter(crudo);
-      const titulo = tituloDesde(campos, md, archivo.basename);
-      const bodyHTML = await renderBody(this.app, md, archivo.path, comp);
-      this.fm = campos;
+      const raw = await this.app.vault.cachedRead(file);
+      const { fields, body: body } = splitFrontmatter(raw);
+      const title = titleFor(fields, body, file.basename);
+      const bodyHTML = await renderBody(this.app, body, file.path, comp);
+      this.fm = fields;
 
       new ExportModal({
         app: this.app,
-        archivo,
-        titulo,
+        file,
+        title,
         bodyHTML,
-        themes: await this.themesDisponibles(),
-        inicial: this.opcionesGuardadas(),
-        cargarTheme: (id) => this.cargarTheme(id),
+        themes: await this.availableThemes(),
+        initial: this.savedOptions(),
+        loadTheme: (id) => this.loadTheme(id),
         onExport: (o) => {
-          // Lo elegido se vuelve el proximo default: nadie quiere reelegir el
-          // formato en cada exportacion.
-          this.ajustes.theme = o.theme;
-          this.ajustes.carpetaSalida = o.carpeta;
-          this.ajustes.abrirAlTerminar = o.abrir;
-          void this.guardarAjustes();
-          void this.exportar(archivo, o, bodyHTML, titulo);
+          // Whatever gets chosen becomes the next default: nobody wants to
+          // re-pick the format on every export.
+          this.settings.theme = o.theme;
+          this.settings.outputFolder = o.folder;
+          this.settings.openWhenDone = o.open;
+          void this.saveSettings();
+          void this.export(file, o, bodyHTML, title);
         },
       }).open();
     } catch (e) {
       console.error("pressmark:", e);
-      new Notice(t("notice.noPudePreview", { e: e instanceof Error ? e.message : String(e) }));
+      new Notice(t("notice.previewError", { e: e instanceof Error ? e.message : String(e) }));
     } finally {
       comp.unload();
     }
   }
 
-  async exportar(
-    archivo: TFile,
-    o: OpcionesExport,
-    bodyPrerenderizado?: string,
-    tituloPrerenderizado?: string,
+  async export(
+    file: TFile,
+    o: ExportOptions,
+    prerenderedBody?: string,
+    prerenderedTitle?: string,
   ): Promise<void> {
-    const aviso = new Notice(t("notice.exportando", { n: archivo.basename }), 0);
-    // Un Component propio para que los child components que crea el renderer
-    // de Obsidian se descarguen aunque la exportacion falle.
+    const notice = new Notice(t("notice.exporting", { n: file.basename }), 0);
+    // A dedicated Component so the child components created by Obsidian's
+    // renderer get unloaded even if the export fails.
     const comp = new Component();
     comp.load();
 
     try {
-      const theme = aplicarOpciones(await this.cargarTheme(o.theme), o);
+      const theme = applyOptions(await this.loadTheme(o.theme), o);
 
-      let titulo = tituloPrerenderizado;
-      let body = bodyPrerenderizado;
+      let title = prerenderedTitle;
+      let body = prerenderedBody;
       let fm = this.fm;
-      if (body === undefined || titulo === undefined) {
-        const crudo = await this.app.vault.cachedRead(archivo);
-        const sep = splitFrontmatter(crudo);
-        fm = sep.campos;
-        titulo = tituloDesde(sep.campos, sep.cuerpo, archivo.basename);
-        body = await renderBody(this.app, sep.cuerpo, archivo.path, comp);
+      if (body === undefined || title === undefined) {
+        const raw = await this.app.vault.cachedRead(file);
+        const sep = splitFrontmatter(raw);
+        fm = sep.fields;
+        title = titleFor(sep.fields, sep.body, file.basename);
+        body = await renderBody(this.app, sep.body, file.path, comp);
       }
-      const html = documentHTML(titulo, body, theme);
+      const html = documentHTML(title, body, theme);
 
       const m = theme.page?.margin;
-      const vars = mergeVars(theme.vars, fm, idioma());
-      const opts = opcionesDe(
+      const vars = mergeVars(theme.vars, fm, language());
+      const opts = printOptionsFor(
         theme,
-        bandHTML(theme.header, m, vars, titulo, idioma()),
-        bandHTML(theme.footer, m, vars, titulo, idioma()),
+        bandHTML(theme.header, m, vars, title, language()),
+        bandHTML(theme.footer, m, vars, title, language()),
       );
 
-      const pdf = await generar(html, opts);
-      const destino = this.rutaSalida(archivo, o.carpeta);
-      await this.app.vault.adapter.writeBinary(destino, bytesDe(pdf));
+      const pdf = await generate(html, opts);
+      const destination = this.outputPath(file, o.folder);
+      await this.app.vault.adapter.writeBinary(destination, bytesOf(pdf));
 
-      aviso.hide();
-      new Notice(`✓ ${destino}`);
-      if (o.abrir) {
-        this.app.workspace.openLinkText(destino, "", false);
+      notice.hide();
+      new Notice(`✓ ${destination}`);
+      if (o.open) {
+        this.app.workspace.openLinkText(destination, "", false);
       }
     } catch (e) {
-      aviso.hide();
+      notice.hide();
       console.error("pressmark:", e);
-      new Notice(t("notice.noPudeExportar", { e: e instanceof Error ? e.message : String(e) }));
+      new Notice(t("notice.exportError", { e: e instanceof Error ? e.message : String(e) }));
     } finally {
       comp.unload();
     }
   }
 
-  private rutaSalida(archivo: TFile, carpetaElegida: string): string {
-    const nombre = `${archivo.basename}.pdf`;
-    const carpeta = carpetaElegida || archivo.parent?.path || "";
-    return normalizePath(carpeta ? `${carpeta}/${nombre}` : nombre);
+  private outputPath(file: TFile, chosenFolder: string): string {
+    const name = `${file.basename}.pdf`;
+    const folder = chosenFolder || file.parent?.path || "";
+    return normalizePath(folder ? `${folder}/${name}` : name);
   }
 }
 
-export { CARPETA_USUARIO };
+export { USER_THEMES_FOLDER };

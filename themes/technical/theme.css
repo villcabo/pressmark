@@ -1,0 +1,66 @@
+/* ============================================================================
+   technical/theme.css — specs, schemas, and code-heavy documents. Layers on
+   top of _base/theme.css.
+
+   Dense: fits nearly a third more per page. Graphite instead of a strong
+   brand color, so the accent doesn't compete with syntax highlighting.
+   The cover page takes up half a page, not a whole one: nobody skims a spec.
+   ========================================================================== */
+
+html { font-size: 9.5pt; }
+.pm-doc { line-height: 1.46; }
+
+/* ── Half-page cover ──────────────────────────────────────────────────── */
+
+.pm-doc > h1:first-of-type {
+  margin-top: var(--cover-offset);
+  font-size: 1.95rem;
+  font-weight: 700;
+  letter-spacing: -0.5pt;
+  color: var(--accent);
+}
+
+.pm-doc > h1:first-of-type code {
+  background: none; padding: 0;
+  font-size: 0.78em; color: var(--accent); font-weight: 600;
+}
+
+.pm-doc > h1:first-of-type + p,
+.pm-doc > h1:first-of-type + table {
+  margin-top: 5mm;
+  padding: 3.5mm 4.5mm;
+  background: var(--accent-soft);
+  border-left: 2.5pt solid var(--accent);
+  font-size: 0.9rem;
+  color: var(--ink);
+  line-height: 1.75;
+}
+
+.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+
+/* ── Compact headings, easy to number at a glance ────────────────────── */
+
+h2 { font-size: 1.2rem; margin: 1.7em 0 0.4em; }
+h3 { font-size: 1.02rem; margin: 1.2em 0 0.3em; }
+
+/* ── Code rules ───────────────────────────────────────────────────────── */
+
+pre {
+  font-size: 0.9em;
+  line-height: 1.5;
+  padding: 0.75em 1em;
+  border-left-width: 3pt;
+  border-left-color: var(--accent);
+}
+
+:not(pre) > code { font-size: 0.9em; }
+
+/* ── Dense tables ─────────────────────────────────────────────────────── */
+
+table { font-size: 0.85em; margin: 0.8em 0; }
+th { padding: 0.3em 0.55em 0.25em; }
+td { padding: 0.32em 0.55em; }
+
+p { margin-bottom: 0.55em; }
+ul, ol { margin-bottom: 0.6em; }
+li { margin-bottom: 0.1em; }

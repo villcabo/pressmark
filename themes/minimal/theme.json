@@ -12,16 +12,16 @@
   "version": "1.0.0",
   "extends": "_base",
   "tokens": {
-    "acento": "#1c1c1c",
-    "acento-tenue": "#f5f5f5",
-    "acento-medio": "#cfcfcf",
-    "tinta": "#131313",
-    "tenue": "#6d6d6d",
-    "regla": "#d9d9d9",
-    "papel-codigo": "#f6f6f6",
-    "aviso": "#4a4a4a",
-    "aviso-fondo": "#f7f7f7",
-    "portada-offset": "82mm"
+    "accent": "#1c1c1c",
+    "accent-soft": "#f5f5f5",
+    "accent-mid": "#cfcfcf",
+    "ink": "#131313",
+    "muted": "#6d6d6d",
+    "rule": "#d9d9d9",
+    "code-bg": "#f6f6f6",
+    "notice": "#4a4a4a",
+    "notice-bg": "#f7f7f7",
+    "cover-offset": "82mm"
   },
   "page": {
     "size": "A4",
@@ -39,7 +39,7 @@
   },
   "footer": {
     "enabled": true,
-    "left": "{{vars.confidencialidad}}",
+    "left": "{{vars.confidentiality}}",
     "right": {
       "en": "Page {{page}} of {{pages}}",
       "es": "Página {{page}} de {{pages}}"
@@ -49,19 +49,19 @@
     "color": "#8a8a8a"
   },
   "vars": {
-    "confidencialidad": {
+    "confidentiality": {
       "en": "Confidential · internal use",
       "es": "Confidencial · uso interno"
     }
   },
   "varSchema": {
-    "confidencialidad": {
+    "confidentiality": {
       "type": "text",
       "label": {
         "en": "Confidentiality notice",
         "es": "Aviso de confidencialidad"
       },
-      "group": "pie",
+      "group": "footer",
       "description": {
         "en": "Shown on the left side of the page footer. A note can override it from its frontmatter with {{fm.<field>}}.",
         "es": "Se muestra a la izquierda del pie de página. Una nota puede pisarlo desde su frontmatter con {{fm.<campo>}}."

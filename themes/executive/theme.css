@@ -1,0 +1,64 @@
+/* ============================================================================
+   executive/theme.css — for leadership and the board. Layers on top of
+   _base/theme.css.
+
+   Serif in the headings, sans in the body. Ink blue, plenty of air. No zebra
+   striping on tables: in a document that gets read, not audited, color
+   bands are noise.
+   ========================================================================== */
+
+html { font-size: 11pt; }
+.pm-doc { line-height: 1.68; }
+
+/* ── Cover page ───────────────────────────────────────────────────────── */
+
+.pm-doc > h1:first-of-type {
+  margin-top: var(--cover-offset);
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.5pt;
+  color: var(--accent);
+}
+
+.pm-doc > h1:first-of-type code {
+  background: none; padding: 0;
+  font-size: 0.74em; color: var(--accent); font-weight: 500;
+}
+
+.pm-doc > h1:first-of-type + p,
+.pm-doc > h1:first-of-type + table {
+  margin-top: 12mm;
+  padding-top: 7mm;
+  border-top: 0.75pt solid var(--accent);
+  font-size: 0.93rem;
+  color: var(--muted);
+  line-height: 2.1;
+}
+
+.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+
+/* ── Headings in serif, with air ─────────────────────────────────────── */
+
+h1, h2, h3 { font-family: var(--font-heading); font-weight: 400; letter-spacing: 0; }
+
+h2 { font-size: 1.5rem; margin: 2.6em 0 0.7em; }
+h3 { font-size: 1.18rem; margin: 1.9em 0 0.4em; color: var(--ink); }
+h4 { font-family: var(--font); font-size: 0.8rem; }
+
+/* ── Tables: no bands, just rules ────────────────────────────────────── */
+
+table { font-size: 0.87em; margin: 1.5em 0; }
+th { font-family: var(--font); padding: 0.5em 0.7em 0.4em; }
+td { padding: 0.6em 0.7em; }
+tbody tr:nth-child(even) { background: none; }
+
+/* ── Quotes: accompany the text, don't interrupt it ──────────────────── */
+
+blockquote {
+  background: var(--accent-soft);
+  border-left: 2pt solid var(--accent);
+  color: var(--ink);
+  font-style: italic;
+}

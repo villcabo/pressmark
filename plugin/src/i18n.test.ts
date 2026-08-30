@@ -4,52 +4,52 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
-const fuente = readFileSync(join(SRC, "i18n.ts"), "utf8");
+const source = readFileSync(join(SRC, "i18n.ts"), "utf8");
 
-/** Saca las claves de un bloque de traduccion del propio archivo. */
-function clavesDe(nombre: string): string[] {
-  const i = fuente.indexOf(`const ${nombre}`);
-  const fin = fuente.indexOf("\n};", i);
-  return [...fuente.slice(i, fin).matchAll(/^\s+"([a-zA-Z.]+)":/gm)].map((m) => m[1]!);
+/** Pulls the keys out of a translation block in the file itself. */
+function keysOf(name: string): string[] {
+  const i = source.indexOf(`const ${name}`);
+  const end = source.indexOf("\n};", i);
+  return [...source.slice(i, end).matchAll(/^\s+"([a-zA-Z.]+)":/gm)].map((m) => m[1]!);
 }
 
 describe("i18n", () => {
-  const en = clavesDe("EN");
-  const es = clavesDe("ES");
+  const en = keysOf("EN");
+  const es = keysOf("ES");
 
-  test("el ingles tiene claves", () => {
+  test("english has keys", () => {
     expect(en.length).toBeGreaterThan(20);
   });
 
-  test("el español cubre todas las claves del ingles", () => {
-    // Una clave sin traducir no rompe (cae al ingles), pero se nota: si esta
-    // lista crece, la UI queda mezclada en dos idiomas.
-    const faltan = en.filter((k) => !es.includes(k));
-    expect(faltan, `sin traducir al español: ${faltan.join(", ")}`).toEqual([]);
+  test("spanish covers every english key", () => {
+    // An untranslated key doesn't break anything (it falls back to English),
+    // but it shows: if this list grows, the UI ends up mixing two languages.
+    const missing = en.filter((k) => !es.includes(k));
+    expect(missing, `not translated to spanish: ${missing.join(", ")}`).toEqual([]);
   });
 
-  test("el español no tiene claves huerfanas", () => {
-    // Una clave que ya no existe en ingles es codigo muerto que enmascara un
-    // renombre mal hecho.
-    const sobran = es.filter((k) => !en.includes(k));
-    expect(sobran, `no existen en ingles: ${sobran.join(", ")}`).toEqual([]);
+  test("spanish has no orphaned keys", () => {
+    // A key that no longer exists in english is dead code masking a botched
+    // rename.
+    const extra = es.filter((k) => !en.includes(k));
+    expect(extra, `don't exist in english: ${extra.join(", ")}`).toEqual([]);
   });
 });
 
-describe("no queda texto en duro en la UI", () => {
-  // Cadenas con tilde o ñ dentro de llamadas a la API de Obsidian: si aparecen
-  // fuera de i18n.ts, alguien escribio texto sin pasar por t().
-  const SOSPECHOSO =
+describe("no hardcoded text left in the UI", () => {
+  // Strings with an accent or ñ inside calls to Obsidian's API: if they
+  // appear outside i18n.ts, someone wrote text without going through t().
+  const SUSPICIOUS =
     /\.(setName|setDesc|setTitle|setButtonText|setTooltip|setPlaceholder|addOption)\([^)]*["'`][^"'`]*[áéíóúñÁÉÍÓÚÑ¿¡][^"'`]*["'`]/;
 
   for (const f of readdirSync(SRC).filter((n) => n.endsWith(".ts") && !n.includes("test") && n !== "i18n.ts")) {
     test(f, () => {
-      const lineas = readFileSync(join(SRC, f), "utf8").split("\n");
-      const malas = lineas
+      const lines = readFileSync(join(SRC, f), "utf8").split("\n");
+      const bad = lines
         .map((l, i) => [i + 1, l] as const)
-        .filter(([, l]) => SOSPECHOSO.test(l))
+        .filter(([, l]) => SUSPICIOUS.test(l))
         .map(([n, l]) => `${n}: ${l.trim()}`);
-      expect(malas, `texto sin traducir en ${f}`).toEqual([]);
+      expect(bad, `untranslated text in ${f}`).toEqual([]);
     });
   }
 });

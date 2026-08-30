@@ -1,28 +1,28 @@
 /* ============================================================================
-   minimal.css — sin color. Va encima de base.css.
+   minimal/theme.css — no color. Layers on top of _base/theme.css.
 
-   Todo el peso lo llevan la tipografía y el espacio en blanco: ni un bloque
-   de color, ni una banda. Imprime idéntico en blanco y negro, que es la razón
-   de que exista.
+   All the weight is carried by typography and whitespace: not a single
+   color block, not a single band. Prints identically in black and white,
+   which is the reason it exists.
    ========================================================================== */
 
 html { font-size: 10.5pt; }
 .pm-doc { line-height: 1.72; font-weight: 350; }
 
-/* ── Portada: solo tipografía ────────────────────────────────────────── */
+/* ── Cover page: typography only ─────────────────────────────────────── */
 
 .pm-doc > h1:first-of-type {
-  margin-top: var(--portada-offset);
+  margin-top: var(--cover-offset);
   font-size: 2.15rem;
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.7pt;
-  color: var(--tinta);
+  color: var(--ink);
 }
 
 .pm-doc > h1:first-of-type code {
   background: none; padding: 0;
-  font-size: 0.78em; font-weight: 400; color: var(--tinta);
+  font-size: 0.78em; font-weight: 400; color: var(--ink);
 }
 
 .pm-doc > h1:first-of-type + p,
@@ -31,25 +31,25 @@ html { font-size: 10.5pt; }
   padding-top: 0;
   border: none;
   font-size: 0.9rem;
-  color: var(--tenue);
+  color: var(--muted);
   line-height: 2;
 }
 
 .pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
 
-/* ── Títulos: peso y aire ────────────────────────────────────────────── */
+/* ── Headings: weight and air ────────────────────────────────────────── */
 
-h1, h2, h3 { color: var(--tinta); }
+h1, h2, h3 { color: var(--ink); }
 h2 { font-size: 1.26rem; font-weight: 600; margin: 2.8em 0 0.7em; }
 h3 { font-size: 1.02rem; font-weight: 600; margin: 2em 0 0.35em; }
 
-/* ── Tablas: dos reglas y nada más ───────────────────────────────────── */
+/* ── Tables: two rules and nothing else ──────────────────────────────── */
 
 table { font-size: 0.88em; margin: 1.6em 0; }
 
 th {
-  color: var(--tinta);
-  border-bottom: 1pt solid var(--tinta);
+  color: var(--ink);
+  border-bottom: 1pt solid var(--ink);
   text-transform: none;
   letter-spacing: 0;
   font-size: 0.92em;
@@ -58,19 +58,19 @@ th {
 
 td { padding: 0.55em 0.6em 0.55em 0; }
 tbody tr:nth-child(even) { background: none; }
-tbody tr:last-child td { border-bottom: 1pt solid var(--tinta); }
+tbody tr:last-child td { border-bottom: 1pt solid var(--ink); }
 
-/* ── Código y citas: grises ──────────────────────────────────────────── */
+/* ── Code and quotes: grays ───────────────────────────────────────────── */
 
-:not(pre) > code { color: var(--tinta); font-weight: 500; }
-pre { border-left: 2pt solid var(--acento-medio); }
+:not(pre) > code { color: var(--ink); font-weight: 500; }
+pre { border-left: 2pt solid var(--accent-mid); }
 
 blockquote {
   background: none;
-  border-left: 2pt solid var(--acento-medio);
-  color: var(--tenue);
+  border-left: 2pt solid var(--accent-mid);
+  color: var(--muted);
   font-style: italic;
   padding-left: 1em;
 }
 
-li::marker { color: var(--tenue); }
+li::marker { color: var(--muted); }

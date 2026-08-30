@@ -1,48 +1,48 @@
 /**
- * Corre EXACTAMENTE los mismos casos que el separador de frontmatter de Go.
- * Fixture compartido: testdata/conformance/frontmatter.json
+ * Runs EXACTLY the same cases as Go's frontmatter splitter.
+ * Shared fixture: testdata/conformance/frontmatter.json
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mergeVars, splitFrontmatter, tituloDesde } from "./document";
+import { mergeVars, splitFrontmatter, titleFor } from "./document";
 
-const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const casos = JSON.parse(
-  readFileSync(join(RAIZ, "testdata/conformance/frontmatter.json"), "utf8"),
-) as Caso[];
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const cases = JSON.parse(
+  readFileSync(join(ROOT, "testdata/conformance/frontmatter.json"), "utf8"),
+) as Case[];
 
-interface Caso {
+interface Case {
   name: string;
   why: string;
   in: string;
-  campos: Record<string, string> | null;
-  cuerpo: string;
+  fields: Record<string, string> | null;
+  body: string;
 }
 
-describe("frontmatter (fixture compartido con Go)", () => {
-  test("hay casos que correr", () => {
-    expect(casos.length).toBeGreaterThan(0);
+describe("frontmatter (fixture shared with Go)", () => {
+  test("there are cases to run", () => {
+    expect(cases.length).toBeGreaterThan(0);
   });
 
-  for (const c of casos) {
+  for (const c of cases) {
     test(c.name, () => {
-      const { campos, cuerpo } = splitFrontmatter(c.in);
-      expect(cuerpo, `${c.why} | cuerpo`).toBe(c.cuerpo);
-      expect(campos, `${c.why} | campos`).toEqual(c.campos);
+      const { fields, body } = splitFrontmatter(c.in);
+      expect(body, `${c.why} | body`).toBe(c.body);
+      expect(fields, `${c.why} | fields`).toEqual(c.fields);
     });
   }
 });
 
-describe("titulo y vars", () => {
-  test("el frontmatter le gana al h1", () => {
-    expect(tituloDesde({ title: "Del frontmatter" }, "# Del h1", "x")).toBe("Del frontmatter");
-    expect(tituloDesde(null, "# Del h1", "x")).toBe("Del h1");
-    expect(tituloDesde(null, "sin titulo", "del archivo")).toBe("del archivo");
+describe("title and vars", () => {
+  test("frontmatter wins over the h1", () => {
+    expect(titleFor({ title: "From the frontmatter" }, "# From the h1", "x")).toBe("From the frontmatter");
+    expect(titleFor(null, "# From the h1", "x")).toBe("From the h1");
+    expect(titleFor(null, "no title", "from the file")).toBe("from the file");
   });
 
-  test("los campos quedan accesibles como fm.clave", () => {
+  test("fields are accessible as fm.field", () => {
     expect(mergeVars({ a: "1" }, { sistema: "PGW" }, "es")).toEqual({ a: "1", "fm.sistema": "PGW" });
     expect(mergeVars({ a: "1" }, null, "es")).toEqual({ a: "1" });
     expect(mergeVars(undefined, null, "es")).toEqual({});

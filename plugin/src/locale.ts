@@ -1,11 +1,11 @@
 /**
- * Resolucion de textos por idioma.
+ * Locale-based text resolution.
  *
- * GEMELO de theme.Localized en Go (cli/internal/theme/locale.go). Los dos
- * corren testdata/conformance/locale.json.
+ * TWIN of theme.Localized in Go (cli/internal/theme/locale.go). Both run
+ * testdata/conformance/locale.json.
  */
 
-/** Un texto para el usuario: cadena suelta, o un objeto por idioma. */
+/** A user-facing text: a plain string, or an object keyed by language. */
 export type Localized = string | Record<string, string>;
 
 const base = (s: string): string => {
@@ -14,46 +14,46 @@ const base = (s: string): string => {
 };
 
 /**
- * Elige el texto para un idioma. Cadena de respaldo, en orden:
+ * Picks the text for a locale. Fallback chain, in order:
  *
- *   1. coincidencia exacta        (pt-BR pide pt-BR)
- *   2. el idioma base del pedido  (pt-BR cae en pt)
- *   3. cualquier variante de ese idioma, la PRIMERA alfabeticamente
+ *   1. exact match             (pt-BR asks for pt-BR)
+ *   2. the request's base lang (pt-BR falls back to pt)
+ *   3. any variant of that language, the FIRST alphabetically
  *   4. en
- *   5. cualquier variante de en
- *   6. la primera clave alfabeticamente
+ *   5. any variant of en
+ *   6. the first key alphabetically
  *
- * El orden alfabetico no es capricho: sin un criterio estable, esta
- * implementacion y la de Go podrian elegir textos distintos.
+ * The alphabetical order isn't a whim: without a stable rule, this
+ * implementation and the Go one could pick different texts.
  */
 export function resolve(v: Localized | undefined, locale: string): string {
   if (v === undefined) return "";
   if (typeof v === "string") return v;
 
-  const claves = Object.keys(v).sort();
-  if (claves.length === 0) return "";
+  const keys = Object.keys(v).sort();
+  if (keys.length === 0) return "";
 
   const l = (locale ?? "").trim() || "en";
-  const exacto = v[l];
-  if (exacto !== undefined) return exacto;
+  const exact = v[l];
+  if (exact !== undefined) return exact;
 
-  for (const cand of [base(l), "en"]) {
-    const directo = v[cand];
-    if (directo !== undefined) return directo;
-    const variante = claves.find((k) => base(k) === cand);
-    if (variante !== undefined) return v[variante]!;
+  for (const candidate of [base(l), "en"]) {
+    const direct = v[candidate];
+    if (direct !== undefined) return direct;
+    const variant = keys.find((k) => base(k) === candidate);
+    if (variant !== undefined) return v[variant]!;
   }
-  return v[claves[0]!]!;
+  return v[keys[0]!]!;
 }
 
 /**
- * El idioma de Obsidian.
+ * Obsidian's language.
  *
- * getLanguage() es API oficial desde 1.8.7 y el manifest declara 1.4.0, asi
- * que no se puede llamar a ciegas: en una version vieja no existe. Se cae a
- * localStorage, que es de donde la lee la propia app.
+ * getLanguage() has been official API since 1.8.7 and the manifest declares
+ * 1.4.0, so it can't be called blindly: it doesn't exist on an old version.
+ * Falls back to localStorage, which is where the app itself reads it from.
  */
-export function idiomaDeObsidian(): string {
+export function obsidianLanguage(): string {
   try {
     const mod = require("obsidian") as { getLanguage?: () => string };
     if (typeof mod.getLanguage === "function") {
@@ -61,7 +61,7 @@ export function idiomaDeObsidian(): string {
       if (l) return l;
     }
   } catch {
-    /* se intenta el respaldo */
+    /* fall back below */
   }
   try {
     return window.localStorage.getItem("language") || "en";

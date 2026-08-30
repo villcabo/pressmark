@@ -6,9 +6,10 @@ const production = process.argv[2] === "production";
 const ctx = await esbuild.context({
   entryPoints: ["src/main.ts"],
   bundle: true,
-  // Obsidian y los builtins de Node los provee el host: bundlearlos rompe el
-  // plugin. Hay que listar las DOS formas — builtin-modules devuelve "fs" y un
-  // `import ... from "node:fs/promises"` no matchea con eso.
+  // Obsidian and Node's builtins are provided by the host: bundling them
+  // breaks the plugin. Both forms have to be listed — builtin-modules
+  // returns "fs" and an `import ... from "node:fs/promises"` doesn't match
+  // that.
   external: [
     "obsidian",
     "electron",
@@ -23,9 +24,9 @@ const ctx = await esbuild.context({
   sourcemap: production ? false : "inline",
   treeShaking: true,
   minify: production,
-  // A la RAIZ del repo: el community store exige manifest.json y los assets
-  // del release en la raiz, sin soporte para monorepos. El codigo se queda en
-  // plugin/src/ y solo los artefactos suben.
+  // At the repo ROOT: the community store requires manifest.json and the
+  // release assets at the root, with no support for monorepos. The code stays
+  // in plugin/src/ and only the build artifacts go up.
   outfile: "../main.js",
 });
 

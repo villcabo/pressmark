@@ -5,62 +5,63 @@ import (
 	"os"
 )
 
-// Overlay busca primero en los themes del usuario y cae a los embebidos.
+// Overlay looks in the user's themes first and falls back to the embedded
+// ones.
 //
-// Hace falta porque la herencia cruza las dos fuentes: un theme propio del
-// usuario declara extends "_base", y _base vive dentro del binario.
-type overlay struct{ capas []fs.FS }
+// This is needed because inheritance crosses both sources: a user's own
+// theme declares extends "_base", and _base lives inside the binary.
+type overlay struct{ layers []fs.FS }
 
-func Overlay(capas ...fs.FS) fs.FS {
+func Overlay(layers ...fs.FS) fs.FS {
 	var out []fs.FS
-	for _, c := range capas {
-		if c != nil {
-			out = append(out, c)
+	for _, l := range layers {
+		if l != nil {
+			out = append(out, l)
 		}
 	}
 	return overlay{out}
 }
 
 func (o overlay) Open(name string) (fs.File, error) {
-	var ultimo error
-	for _, c := range o.capas {
-		f, err := c.Open(name)
+	var last error
+	for _, l := range o.layers {
+		f, err := l.Open(name)
 		if err == nil {
 			return f, nil
 		}
-		ultimo = err
+		last = err
 	}
-	if ultimo == nil {
-		ultimo = fs.ErrNotExist
+	if last == nil {
+		last = fs.ErrNotExist
 	}
-	return nil, ultimo
+	return nil, last
 }
 
 func (o overlay) ReadDir(name string) ([]fs.DirEntry, error) {
-	visto := map[string]bool{}
+	seen := map[string]bool{}
 	var out []fs.DirEntry
-	var ultimo error
-	for _, c := range o.capas {
-		e, err := fs.ReadDir(c, name)
+	var last error
+	for _, l := range o.layers {
+		e, err := fs.ReadDir(l, name)
 		if err != nil {
-			ultimo = err
+			last = err
 			continue
 		}
 		for _, x := range e {
-			if !visto[x.Name()] {
-				visto[x.Name()] = true
+			if !seen[x.Name()] {
+				seen[x.Name()] = true
 				out = append(out, x)
 			}
 		}
-		ultimo = nil
+		last = nil
 	}
-	return out, ultimo
+	return out, last
 }
 
-// UserDir devuelve el directorio de themes del usuario si existe.
-func UserDir(explicito string) fs.FS {
-	if explicito != "" {
-		return os.DirFS(explicito)
+// UserDir returns the user's theme directory if it exists.
+func UserDir(explicit string) fs.FS {
+	if explicit != "" {
+		return os.DirFS(explicit)
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {

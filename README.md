@@ -38,12 +38,12 @@ CLI is how you use it everywhere else.
 
 | Format | Cover | Made for |
 | ------ | ----- | -------- |
-| `informe` | full page | Formal reports. The canonical one. |
-| `nota` | none | Diagnostics and lists. Starts right away. |
-| `ejecutivo` | full page | Leadership and steering committees. |
-| `tecnico` | half page | Specs with a lot of code. Dense. |
+| `report` | full page | Formal reports. The canonical one. |
+| `note` | none | Diagnostics and lists. Starts right away. |
+| `executive` | full page | Leadership and steering committees. |
+| `technical` | half page | Specs with a lot of code. Dense. |
 | `minimal` | full page | No color at all. Prints the same in black and white. |
-| `moderno` | full page | Proposals and product documents. |
+| `modern` | full page | Proposals and product documents. |
 
 ## Usage
 
@@ -65,7 +65,9 @@ Custom packs go in `.obsidian/pressmark/themes/<id>/` inside your vault. A pack
 of your own can inherit from a built-in one: `extends: "_base"` works even
 though `_base` ships inside the plugin.
 
-See [`docs/theme-format.md`](docs/theme-format.md) for the full format.
+See [`docs/theme-format.md`](docs/theme-format.md) for the full format, and
+[`docs/format-rationale.md`](docs/format-rationale.md) for why it is shaped the
+way it is — most of its rules exist because something broke first.
 
 ## Command line
 
@@ -76,9 +78,9 @@ installed Chrome — no Node, no Puppeteer, no `mmdc`.
 make build                                  # -> dist/pressmark
 
 pressmark report.md                         # PDF next to the .md
-pressmark report.md --estilo tecnico        # another format
-pressmark reports/ --estilo nota --carta    # a whole folder
-pressmark --listar                          # available formats
+pressmark report.md --theme technical       # another format
+pressmark reports/ --theme note --letter    # a whole folder
+pressmark --list                            # available formats
 ```
 
 ## How both sides stay identical

@@ -1,72 +1,72 @@
 [
   {
-    "name": "una cadena suelta pasa igual",
-    "why": "Un theme que no se traduce no deberia tener que escribir un objeto por idioma.",
-    "valor": "Informe",
+    "name": "a plain string passes through",
+    "why": "A theme that is not translated should not have to write a per-language object.",
+    "value": "Report",
     "locale": "es",
-    "quiere": "Informe"
+    "want": "Report"
   },
   {
-    "name": "coincidencia exacta",
-    "why": "Lo mas especifico gana siempre.",
-    "valor": { "en": "Report", "es": "Informe" },
+    "name": "exact match",
+    "why": "The most specific entry always wins.",
+    "value": { "en": "Report", "es": "Informe" },
     "locale": "es",
-    "quiere": "Informe"
+    "want": "Informe"
   },
   {
-    "name": "region cae al idioma base",
-    "why": "es-419 (Latinoamerica) no va a estar declarado casi nunca; tiene que caer en es.",
-    "valor": { "en": "Report", "es": "Informe" },
+    "name": "a region falls back to its base language",
+    "why": "es-419 (Latin America) is almost never declared; it must land on es.",
+    "value": { "en": "Report", "es": "Informe" },
     "locale": "es-419",
-    "quiere": "Informe"
+    "want": "Informe"
   },
   {
-    "name": "el idioma base encuentra una variante regional",
-    "why": "Si el theme solo trae pt-BR y Obsidian esta en pt, es mejor eso que ingles.",
-    "valor": { "en": "Report", "pt-BR": "Relatorio" },
+    "name": "a base language finds a regional variant",
+    "why": "If the theme only ships pt-BR and Obsidian is set to pt, that beats English.",
+    "value": { "en": "Report", "pt-BR": "Relatorio" },
     "locale": "pt",
-    "quiere": "Relatorio"
+    "want": "Relatorio"
   },
   {
-    "name": "entre varias variantes gana la primera en orden alfabetico",
-    "why": "Tiene que ser DETERMINISTA: los mapas de Go iteran al azar y las dos implementaciones deben coincidir.",
-    "valor": { "es-419": "Latino", "es-ES": "Peninsular" },
+    "name": "among several variants the first alphabetically wins",
+    "why": "It has to be DETERMINISTIC: Go maps iterate randomly and both implementations must agree.",
+    "value": { "es-419": "Latino", "es-ES": "Peninsular" },
     "locale": "es",
-    "quiere": "Latino"
+    "want": "Latino"
   },
   {
-    "name": "idioma desconocido cae en ingles",
-    "why": "El ingles es el respaldo declarado del formato.",
-    "valor": { "en": "Report", "es": "Informe" },
+    "name": "an unknown language falls back to English",
+    "why": "English is the format's declared fallback.",
+    "value": { "en": "Report", "es": "Informe" },
     "locale": "ja",
-    "quiere": "Report"
+    "want": "Report"
   },
   {
-    "name": "sin ingles cae en la primera en orden alfabetico",
-    "why": "Antes que devolver vacio, se muestra algo. Y estable.",
-    "valor": { "fr": "Rapport", "es": "Informe" },
+    "name": "with no English it falls back to the first alphabetically",
+    "why": "Showing something beats showing nothing. And it must be stable.",
+    "value": { "fr": "Rapport", "es": "Informe" },
     "locale": "ja",
-    "quiere": "Informe"
+    "want": "Informe"
   },
   {
-    "name": "locale vacio se trata como ingles",
-    "why": "Es el default de Obsidian cuando el usuario nunca eligio idioma.",
-    "valor": { "en": "Report", "es": "Informe" },
+    "name": "an empty locale is treated as English",
+    "why": "That is Obsidian's default when the user never picked a language.",
+    "value": { "en": "Report", "es": "Informe" },
     "locale": "",
-    "quiere": "Report"
+    "want": "Report"
   },
   {
-    "name": "la region exacta le gana al idioma base",
-    "why": "Si el theme se tomo el trabajo de distinguir pt-BR, hay que respetarlo.",
-    "valor": { "pt": "Relatorio", "pt-BR": "Relatorio BR" },
+    "name": "an exact region beats the base language",
+    "why": "If the theme bothered to distinguish pt-BR, honour it.",
+    "value": { "pt": "Relatorio", "pt-BR": "Relatorio BR" },
     "locale": "pt-BR",
-    "quiere": "Relatorio BR"
+    "want": "Relatorio BR"
   },
   {
-    "name": "objeto vacio devuelve vacio",
-    "why": "No hay nada que mostrar y no debe romper.",
-    "valor": {},
+    "name": "an empty object returns empty",
+    "why": "There is nothing to show and it must not throw.",
+    "value": {},
     "locale": "es",
-    "quiere": ""
+    "want": ""
   }
 ]

@@ -1,0 +1,64 @@
+/* ============================================================================
+   modern/theme.css — proposals and product documents. Layers on top of
+   _base/theme.css.
+
+   Inter Display in the headings, plum as the accent. Plum was chosen over
+   another blue so it isn't confused with executive or with the base's
+   green: the six themes have to stand apart at a glance, not by name.
+   ========================================================================== */
+
+html { font-size: 10.5pt; }
+.pm-doc { line-height: 1.62; }
+
+/* ── Cover page: the data lands in a card ────────────────────────────── */
+
+.pm-doc > h1:first-of-type {
+  margin-top: var(--cover-offset);
+  font-family: var(--font-heading);
+  font-size: 2.65rem;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -1.2pt;
+  color: var(--accent);
+}
+
+.pm-doc > h1:first-of-type code {
+  background: none; padding: 0;
+  font-size: 0.72em; color: var(--accent); font-weight: 600;
+}
+
+.pm-doc > h1:first-of-type + p,
+.pm-doc > h1:first-of-type + table {
+  margin-top: 10mm;
+  padding: 5mm 6mm;
+  border: none;
+  border-radius: 5pt;
+  background: var(--accent-soft);
+  font-size: 0.93rem;
+  color: var(--ink);
+  line-height: 1.85;
+}
+
+.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+
+/* ── Headings ────────────────────────────────────────────────────────── */
+
+h1, h2, h3 { font-family: var(--font-heading); letter-spacing: -0.4pt; }
+h2 { font-size: 1.4rem; font-weight: 700; margin: 2.3em 0 0.5em; }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 1.7em 0 0.35em; }
+h4 { text-transform: none; letter-spacing: 0; color: var(--accent); font-size: 0.86rem; }
+
+/* ── Tables ───────────────────────────────────────────────────────────
+   No `overflow:hidden` or `border-radius` on <table>: they break
+   table-header-group and the header repeats EMPTY when the table splits. */
+
+table { font-size: 0.87em; margin: 1.3em 0; }
+th { padding: 0.45em 0.75em 0.35em; }
+td { padding: 0.5em 0.75em; }
+
+/* ── Code: soft card ──────────────────────────────────────────────────── */
+
+pre { border-radius: 0 5pt 5pt 0; border-left-width: 3pt; border-left-color: var(--accent-mid); }
+:not(pre) > code { border-radius: 3pt; }
+
+blockquote { border-radius: 0 5pt 5pt 0; }

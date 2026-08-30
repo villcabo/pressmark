@@ -1,14 +1,14 @@
 /**
- * Cargador de theme packs.
+ * Theme pack loader.
  *
- * ESTE ARCHIVO ES UN GEMELO del cargador de Go en cli/internal/theme. La misma
- * semantica escrita dos veces, en dos lenguajes. Si divergen, el mismo theme
- * pack rinde distinto en la terminal y en Obsidian — que es lo unico que este
- * proyecto existe para evitar.
+ * THIS FILE IS A TWIN of the Go loader in cli/internal/theme. The same
+ * semantics written twice, in two languages. If they diverge, the same theme
+ * pack renders differently in the terminal and in Obsidian — which is the one
+ * thing this project exists to prevent.
  *
- * Por eso los dos corren los mismos casos: testdata/conformance/cases.json.
- * Antes de tocar el merge, mira si hay un caso que lo cubra. Si no lo hay,
- * agregalo ahi PRIMERO y arregla las dos implementaciones.
+ * That's why both run the same cases: testdata/conformance/cases.json.
+ * Before touching the merge, check whether a case already covers it. If not,
+ * add it there FIRST and fix both implementations.
  */
 
 import type { Localized } from "./locale";
@@ -81,14 +81,14 @@ export interface Resolved extends Theme {
   chain: string[];
 }
 
-/** Fuente de theme packs. Devuelve null si el archivo no existe. */
+/** Theme pack source. Returns null if the file doesn't exist. */
 export interface ThemeFS {
   read(path: string): Promise<string | null>;
   list?(): Promise<string[]>;
 }
 
-/** Los tokens admiten numeros en el JSON; al emitirse como var CSS todo es texto. */
-function normalizarTokens(t: unknown): Record<string, Value> | undefined {
+/** Tokens allow numbers in the JSON; once emitted as a CSS var everything is text. */
+function normalizeTokens(t: unknown): Record<string, Value> | undefined {
   if (t === undefined || t === null || typeof t !== "object") return undefined;
   const out: Record<string, Value> = {};
   for (const [k, v] of Object.entries(t as Record<string, unknown>)) {
@@ -98,82 +98,82 @@ function normalizarTokens(t: unknown): Record<string, Value> | undefined {
 }
 
 /**
- * Ausente significa "_base"; null explicito significa sin padre. La distincion
- * importa y `theme.extends ?? BASE_ID` la borraria.
+ * Absent means "_base"; explicit null means no parent. The distinction
+ * matters and `theme.extends ?? BASE_ID` would erase it.
  */
-function padre(t: Theme): string | null {
+function parentOf(t: Theme): string | null {
   if (!("extends" in t) || t.extends === undefined) return BASE_ID;
   return t.extends;
 }
 
 export async function load(fs: ThemeFS, id: string): Promise<Resolved> {
-  const vistos = new Set<string>();
-  const cadena: Theme[] = [];
+  const seen = new Set<string>();
+  const chain: Theme[] = [];
 
-  let actual: string | null = id;
-  while (actual) {
-    if (vistos.has(actual)) {
-      throw new Error(`herencia circular de themes en "${actual}"`);
+  let current: string | null = id;
+  while (current) {
+    if (seen.has(current)) {
+      throw new Error(`circular theme inheritance at "${current}"`);
     }
-    vistos.add(actual);
+    seen.add(current);
 
-    const crudo = await fs.read(`${actual}/theme.json`);
-    if (crudo === null) {
-      throw new Error(`theme "${actual}": no encontre theme.json`);
+    const raw = await fs.read(`${current}/theme.json`);
+    if (raw === null) {
+      throw new Error(`theme "${current}": could not find theme.json`);
     }
     let t: Theme;
     try {
-      t = JSON.parse(crudo) as Theme;
+      t = JSON.parse(raw) as Theme;
     } catch (e) {
-      throw new Error(`theme "${actual}": theme.json invalido: ${String(e)}`);
+      throw new Error(`theme "${current}": invalid theme.json: ${String(e)}`);
     }
-    if (t.id !== actual) {
-      throw new Error(`theme "${actual}": el id declarado es "${t.id}"`);
+    if (t.id !== current) {
+      throw new Error(`theme "${current}": the declared id is "${t.id}"`);
     }
-    t.tokens = normalizarTokens(t.tokens);
-    cadena.unshift(t); // el padre queda antes
+    t.tokens = normalizeTokens(t.tokens);
+    chain.unshift(t); // the parent goes first
 
-    actual = padre(t);
+    current = parentOf(t);
   }
 
   const out = { chain: [] as string[] } as Resolved;
-  const partes: string[] = [];
+  const parts: string[] = [];
 
-  for (const t of cadena) {
+  for (const t of chain) {
     out.chain.push(t.id);
-    mezclar(out, t);
+    merge(out, t);
 
     const css = await fs.read(`${t.id}/theme.css`);
     if (css === null) {
-      throw new Error(`theme "${t.id}": no encontre theme.css`);
+      throw new Error(`theme "${t.id}": could not find theme.css`);
     }
-    partes.push(`/* ── ${t.id} ── */\n${css}`);
+    parts.push(`/* ── ${t.id} ── */\n${css}`);
   }
-  out.css = partes.join("\n");
+  out.css = parts.join("\n");
 
-  // La identidad es la del theme pedido, no la del ancestro.
-  const ultimo = cadena[cadena.length - 1]!;
-  out.id = ultimo.id;
-  out.name = ultimo.name;
-  out.description = ultimo.description;
-  out.version = ultimo.version;
-  out.author = ultimo.author;
+  // The identity is the requested theme's, not the ancestor's.
+  const last = chain[chain.length - 1]!;
+  out.id = last.id;
+  out.name = last.name;
+  out.description = last.description;
+  out.version = last.version;
+  out.author = last.author;
   return out;
 }
 
-function mezclar(dst: Resolved, src: Theme): void {
+function merge(dst: Resolved, src: Theme): void {
   if (src.highlight !== undefined) dst.highlight = src.highlight;
-  dst.tokens = mezclarMapa(dst.tokens, src.tokens);
-  dst.vars = mezclarMapa(dst.vars, src.vars);
-  dst.tokenSchema = mezclarMapa(dst.tokenSchema, src.tokenSchema);
-  dst.varSchema = mezclarMapa(dst.varSchema, src.varSchema);
-  dst.page = mezclarPage(dst.page, src.page);
-  dst.cover = mezclarPlano(dst.cover, src.cover);
-  dst.header = mezclarPlano(dst.header, src.header);
-  dst.footer = mezclarPlano(dst.footer, src.footer);
+  dst.tokens = mergeMap(dst.tokens, src.tokens);
+  dst.vars = mergeMap(dst.vars, src.vars);
+  dst.tokenSchema = mergeMap(dst.tokenSchema, src.tokenSchema);
+  dst.varSchema = mergeMap(dst.varSchema, src.varSchema);
+  dst.page = mergePage(dst.page, src.page);
+  dst.cover = mergeShallow(dst.cover, src.cover);
+  dst.header = mergeShallow(dst.header, src.header);
+  dst.footer = mergeShallow(dst.footer, src.footer);
 }
 
-function mezclarMapa<V>(
+function mergeMap<V>(
   dst: Record<string, V> | undefined,
   src: Record<string, V> | undefined,
 ): Record<string, V> | undefined {
@@ -182,11 +182,11 @@ function mezclarMapa<V>(
 }
 
 /**
- * Campo a campo, y `undefined` es lo unico que se considera ausente.
- * `enabled: false` TIENE que pisar a `true` — por eso no se usa `||` ni `??`
- * sobre el valor, sino una comprobacion explicita contra undefined.
+ * Field by field, and `undefined` is the only thing treated as absent.
+ * `enabled: false` HAS to override `true` — that's why it doesn't use `||`
+ * or `??` on the value, but an explicit check against undefined.
  */
-function mezclarPlano<T extends object>(dst: T | undefined, src: T | undefined): T | undefined {
+function mergeShallow<T extends object>(dst: T | undefined, src: T | undefined): T | undefined {
   if (src === undefined) return dst;
   const out = { ...(dst ?? ({} as T)) };
   for (const [k, v] of Object.entries(src)) {
@@ -195,17 +195,17 @@ function mezclarPlano<T extends object>(dst: T | undefined, src: T | undefined):
   return out;
 }
 
-function mezclarPage(dst: Page | undefined, src: Page | undefined): Page | undefined {
+function mergePage(dst: Page | undefined, src: Page | undefined): Page | undefined {
   if (src === undefined) return dst;
-  const { margin: margenSrc, ...restoSrc } = src;
-  const out = mezclarPlano(dst, restoSrc as Page)!;
-  if (margenSrc !== undefined) {
-    out.margin = mezclarPlano(dst?.margin, margenSrc);
+  const { margin: marginSrc, ...restSrc } = src;
+  const out = mergeShallow(dst, restSrc as Page)!;
+  if (marginSrc !== undefined) {
+    out.margin = mergeShallow(dst?.margin, marginSrc);
   }
   return out;
 }
 
-/** Los packs con id que arranca en _ son internos: se heredan, no se eligen. */
+/** Packs whose id starts with _ are internal: they're inherited, not chosen. */
 export async function list(fs: ThemeFS): Promise<string[]> {
   const ids = (await fs.list?.()) ?? [];
   return ids.filter((n) => !n.startsWith("_")).sort();

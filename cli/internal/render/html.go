@@ -16,10 +16,10 @@ import (
 	"github.com/villcabo/pressmark/cli/internal/theme"
 )
 
-// Wrapper es el contrato de estructura HTML que comparten el CLI y el plugin.
-// Los bloques de primer nivel tienen que ser hijos DIRECTOS de este elemento:
-// el CSS de los themes depende de eso (.pm-doc > h1:first-of-type arma la
-// portada). Si el plugin anida el contenido, la portada no funciona.
+// Wrapper is the HTML structure contract shared by the CLI and the plugin.
+// Top-level blocks have to be DIRECT children of this element: the themes'
+// CSS depends on that (.pm-doc > h1:first-of-type builds the cover). If the
+// plugin nests the content, the cover doesn't work.
 const Wrapper = "pm-doc"
 
 func Markdown(src []byte, highlight string) ([]byte, error) {
@@ -40,7 +40,7 @@ func Markdown(src []byte, highlight string) ([]byte, error) {
 			parser.WithAutoHeadingID(),
 		),
 		goldmark.WithRendererOptions(
-			ghtml.WithUnsafe(), // el markdown puede traer HTML propio, ej. saltos forzados
+			ghtml.WithUnsafe(), // markdown may carry its own HTML, e.g. forced line breaks
 		),
 	)
 	var buf bytes.Buffer
@@ -50,30 +50,31 @@ func Markdown(src []byte, highlight string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// TokensCSS emite los design tokens como variables en :root. Va ANTES del CSS
-// del theme, que los consume con var(--nombre). Por eso un theme.css no declara
-// :root: lo genera el renderer desde theme.json, que es la fuente unica.
+// TokensCSS emits the design tokens as :root variables. It goes BEFORE the
+// theme's CSS, which consumes them with var(--name). That's why a theme.css
+// doesn't declare :root itself: the renderer generates it from theme.json,
+// which is the single source of truth.
 func TokensCSS(tokens map[string]theme.Value) string {
 	if len(tokens) == 0 {
 		return ""
 	}
-	nombres := make([]string, 0, len(tokens))
+	names := make([]string, 0, len(tokens))
 	for k := range tokens {
-		nombres = append(nombres, k)
+		names = append(names, k)
 	}
-	sort.Strings(nombres) // salida estable: el corpus golden compara byte a byte
+	sort.Strings(names) // stable output: the golden corpus compares byte for byte
 
 	var sb strings.Builder
 	sb.WriteString(":root {\n")
-	for _, k := range nombres {
+	for _, k := range names {
 		fmt.Fprintf(&sb, "  --%s: %s;\n", k, tokens[k])
 	}
 	sb.WriteString("}\n")
 	return sb.String()
 }
 
-// CoverCSS traduce cover.break a la regla del primer <hr>. Vive aca y no en el
-// CSS del theme porque es una decision declarada en theme.json.
+// CoverCSS translates cover.break into the first-<hr> rule. It lives here and
+// not in the theme's CSS because it's a decision declared in theme.json.
 func CoverCSS(c *theme.Cover) string {
 	if c == nil || c.Enabled == nil || !*c.Enabled {
 		return ""
@@ -89,21 +90,29 @@ func CoverCSS(c *theme.Cover) string {
 type Doc struct {
 	Title    string
 	Body     []byte
+	Lang     string // BCP-47 tag for the <html lang> attribute
 	Theme    *theme.Resolved
-	FontCSS  string // @font-face de las fuentes empaquetadas, si las hay
-	ScriptJS string // mermaid.js embebido, solo si el documento trae diagramas
+	FontCSS  string // @font-face for bundled fonts, if any
+	ScriptJS string // embedded mermaid.js, only when the document has diagrams
 }
 
-// HTML arma el documento completo que se le da a Chrome.
+// HTML assembles the complete document handed to Chrome.
 func HTML(d Doc) []byte {
 	var sb bytes.Buffer
-	sb.WriteString("<!doctype html>\n<html lang=\"es\">\n<head>\n")
+	// The lang attribute drives hyphenation and quote shaping in the print
+	// engine. Hardcoding one language gets those wrong for every other.
+	lang := d.Lang
+	if lang == "" {
+		lang = "en"
+	}
+	fmt.Fprintf(&sb, "<!doctype html>\n<html lang=%q>\n<head>\n", lang)
 	sb.WriteString("<meta charset=\"utf-8\">\n")
 	fmt.Fprintf(&sb, "<title>%s</title>\n", html.EscapeString(d.Title))
 
-	// Reset minimo. El margen de 8px que el navegador le pone a <body> no es
-	// cosmetico: corre TODO el documento y desalinea el cuerpo del pie, que se
-	// posiciona con el margen de printToPDF. Medido: 5.25pt de corrimiento.
+	// Minimal reset. The 8px margin browsers put on <body> is not cosmetic:
+	// it shifts the WHOLE document and misaligns the body against the footer,
+	// which is positioned using printToPDF's margin. Measured: a 5.25pt
+	// offset.
 	sb.WriteString("<style>\nhtml, body { margin: 0; padding: 0; }\n</style>\n")
 
 	sb.WriteString("<style>\n")
@@ -123,8 +132,8 @@ func HTML(d Doc) []byte {
 	sb.WriteString("</style>\n")
 
 	if d.ScriptJS != "" {
-		// Va en <head> y sin defer: tiene que estar definido antes de que el
-		// Prep lo invoque desde CDP.
+		// Goes in <head> without defer: it has to be defined before the Prep
+		// step invokes it from CDP.
 		sb.WriteString("<script>\n")
 		sb.WriteString(d.ScriptJS)
 		sb.WriteString("\n</script>\n")
@@ -137,8 +146,8 @@ func HTML(d Doc) []byte {
 	return sb.Bytes()
 }
 
-// Title saca el titulo del primer h1 del markdown. Sirve para {{title}} y para
-// el <title> del documento.
+// Title extracts the title from the markdown's first h1. Used for {{title}}
+// and for the document's <title>.
 func Title(src []byte, fallback string) string {
 	for _, l := range strings.Split(string(src), "\n") {
 		if t, ok := strings.CutPrefix(strings.TrimSpace(l), "# "); ok {

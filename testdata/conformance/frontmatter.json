@@ -1,65 +1,65 @@
 [
   {
-    "name": "frontmatter normal",
-    "why": "Se separa y no llega al cuerpo. Su --- de apertura NO debe ser el primer <hr> del documento.",
+    "name": "plain frontmatter",
+    "why": "It is split off and never reaches the body. Its opening --- must NOT become the document's first <hr>.",
     "in": "---\ntipo: prueba\nsistema: Pressmark\n---\n\n# Titulo",
-    "campos": { "tipo": "prueba", "sistema": "Pressmark" },
-    "cuerpo": "\n# Titulo"
+    "fields": { "tipo": "prueba", "sistema": "Pressmark" },
+    "body": "\n# Titulo"
   },
   {
-    "name": "cierre con tres puntos",
-    "why": "YAML admite ... como cierre de documento.",
-    "in": "---\na: 1\n...\ncuerpo",
-    "campos": { "a": "1" },
-    "cuerpo": "cuerpo"
+    "name": "closed with three dots",
+    "why": "YAML accepts ... as a document terminator.",
+    "in": "---\na: 1\n...\nbody",
+    "fields": { "a": "1" },
+    "body": "body"
   },
   {
-    "name": "lista se aplana",
-    "why": "Una lista solo sirve en un pie si es una linea de texto.",
-    "in": "---\ntags: [uno, dos, tres]\n---\nx",
-    "campos": { "tags": "uno, dos, tres" },
-    "cuerpo": "x"
+    "name": "a list is flattened",
+    "why": "A list is only usable in a footer if it is a single line of text.",
+    "in": "---\ntags: [one, two, three]\n---\nx",
+    "fields": { "tags": "one, two, three" },
+    "body": "x"
   },
   {
-    "name": "comillas fuera",
-    "why": "El valor entre comillas se usa tal cual en el pie, sin las comillas.",
-    "in": "---\ntitle: \"Un titulo\"\n---\nx",
-    "campos": { "title": "Un titulo" },
-    "cuerpo": "x"
+    "name": "quotes are stripped",
+    "why": "A quoted value is used verbatim in the footer, without the quotes.",
+    "in": "---\ntitle: \"A title\"\n---\nx",
+    "fields": { "title": "A title" },
+    "body": "x"
   },
   {
-    "name": "sin cierre NO es frontmatter",
-    "why": "Inventar el cierre se comeria contenido real del documento.",
-    "in": "---\nno cierra nunca\n# Titulo",
-    "campos": null,
-    "cuerpo": "---\nno cierra nunca\n# Titulo"
+    "name": "unterminated is NOT frontmatter",
+    "why": "Inventing the closing delimiter would swallow real document content.",
+    "in": "---\nnever closes\n# Title",
+    "fields": null,
+    "body": "---\nnever closes\n# Title"
   },
   {
-    "name": "documento sin frontmatter queda intacto",
-    "why": "Un --- en el medio es un separador comun y debe seguir siendolo.",
-    "in": "# Titulo\n\ntexto\n\n---\n\nmas",
-    "campos": null,
-    "cuerpo": "# Titulo\n\ntexto\n\n---\n\nmas"
+    "name": "a document without frontmatter is untouched",
+    "why": "A --- in the middle is an ordinary thematic break and must stay one.",
+    "in": "# Title\n\ntext\n\n---\n\nmore",
+    "fields": null,
+    "body": "# Title\n\ntext\n\n---\n\nmore"
   },
   {
-    "name": "--- fuera de la primera linea no abre frontmatter",
-    "why": "El frontmatter solo existe si arranca en la primerisima linea.",
+    "name": "--- past the first line does not open frontmatter",
+    "why": "Frontmatter only exists when it starts on the very first line.",
     "in": "\n---\na: 1\n---\nx",
-    "campos": null,
-    "cuerpo": "\n---\na: 1\n---\nx"
+    "fields": null,
+    "body": "\n---\na: 1\n---\nx"
   },
   {
-    "name": "anidado se ignora sin fallar",
-    "why": "Un frontmatter raro no puede impedir que el documento se exporte.",
-    "in": "---\nraiz: si\nobj:\n  hijo: 1\n---\nx",
-    "campos": { "raiz": "si", "obj": "" },
-    "cuerpo": "x"
+    "name": "nested keys are skipped without failing",
+    "why": "Odd frontmatter must never stop a document from being exported.",
+    "in": "---\nroot: yes\nobj:\n  child: 1\n---\nx",
+    "fields": { "root": "yes", "obj": "" },
+    "body": "x"
   },
   {
-    "name": "comentarios y lineas vacias se saltan",
-    "why": "Son YAML valido y no son campos.",
-    "in": "---\n# un comentario\n\na: 1\n---\nx",
-    "campos": { "a": "1" },
-    "cuerpo": "x"
+    "name": "comments and blank lines are skipped",
+    "why": "They are valid YAML and they are not fields.",
+    "in": "---\n# a comment\n\na: 1\n---\nx",
+    "fields": { "a": "1" },
+    "body": "x"
   }
 ]

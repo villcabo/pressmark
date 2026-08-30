@@ -1,166 +1,168 @@
 /**
- * Cadenas de la interfaz del plugin.
+ * Strings for the plugin's interface.
  *
- * El ingles es el idioma base y el respaldo: es lo que espera el community
- * store y lo que ve quien no tenga su idioma traducido.
+ * English is the base language and the fallback: it's what the community
+ * store expects and what anyone without their language translated sees.
  *
- * Solo se incluyen los idiomas que se pueden revisar de verdad. Meter
- * traducciones automaticas de idiomas que nadie del proyecto lee es peor que no
- * tenerlas: quedan mal y nadie se entera. Agregar uno es agregar una entrada
- * aca; las claves que falten caen solas al ingles.
+ * Only languages that can genuinely be reviewed are included. Dropping in
+ * machine translations of languages nobody on the project reads is worse than
+ * not having them: they end up wrong and nobody notices. Adding one means
+ * adding an entry here; missing keys fall through to English on their own.
  */
-import { idiomaDeObsidian, resolve } from "./locale";
+import { obsidianLanguage, resolve } from "./locale";
 
 const EN = {
-  "modal.titulo": "Pressmark · Export to PDF",
-  "modal.formato": "Format",
-  "modal.formatoDesc": "The theme pack to apply.",
-  "modal.papel": "Paper size",
-  "modal.delFormato": "From the format",
-  "modal.orientacion": "Orientation",
-  "modal.vertical": "Portrait",
-  "modal.horizontal": "Landscape",
-  "modal.margen": "Margin",
-  "modal.margenDesc": "In millimetres, even on all four sides. Empty = from the format.",
-  "modal.margenPlaceholder": "from the format",
-  "modal.margenInvalido": "The margin must be a number in millimetres.",
-  "modal.portada": "Cover page",
-  "modal.portadaDesc": "The first heading and its metadata on their own page.",
-  "modal.conPortada": "With cover",
-  "modal.sinPortada": "Without cover",
-  "modal.carpeta": "Output folder",
-  "modal.carpetaDesc": "Empty = next to the note.",
-  "modal.carpetaPlaceholder": "next to the note",
-  "modal.abrir": "Open when finished",
-  "modal.cancelar": "Cancel",
-  "modal.exportar": "Export to PDF",
-  "modal.carilla": "page {n}",
-  "modal.errorFormato": "Could not load the format: {e}",
-  "info.vertical": "portrait",
-  "info.horizontal": "landscape",
-  "info.margenes": "margins",
-  "info.conPortada": "with cover",
-  "info.sinPortada": "without cover",
-  "info.conPie": "with footer",
-  "info.carillas": "~{n} page(s)",
-  "info.propio": "custom",
-  "set.exportacion": "Export",
+  "modal.title": "Pressmark · Export to PDF",
+  "modal.format": "Format",
+  "modal.formatDesc": "The theme pack to apply.",
+  "modal.paperSize": "Paper size",
+  "modal.fromFormat": "From the format",
+  "modal.orientation": "Orientation",
+  "modal.portrait": "Portrait",
+  "modal.landscape": "Landscape",
+  "modal.margin": "Margin",
+  "modal.marginDesc": "In millimetres, even on all four sides. Empty = from the format.",
+  "modal.marginPlaceholder": "from the format",
+  "modal.marginInvalid": "The margin must be a number in millimetres.",
+  "modal.cover": "Cover page",
+  "modal.coverDesc": "The first heading and its metadata on their own page.",
+  "modal.withCover": "With cover",
+  "modal.withoutCover": "Without cover",
+  "modal.outputFolder": "Output folder",
+  "modal.outputFolderDesc": "Empty = next to the note.",
+  "modal.outputFolderPlaceholder": "next to the note",
+  "modal.openWhenDone": "Open when finished",
+  "modal.cancel": "Cancel",
+  "modal.export": "Export to PDF",
+  "modal.page": "page {n}",
+  "modal.formatError": "Could not load the format: {e}",
+  "info.portrait": "portrait",
+  "info.landscape": "landscape",
+  "info.margins": "margins",
+  "info.withCover": "with cover",
+  "info.withoutCover": "without cover",
+  "info.withFooter": "with footer",
+  "info.pages": "~{n} page(s)",
+  "info.custom": "custom",
+  "set.export": "Export",
   "set.themePack": "Theme pack",
   "set.themePackDesc": "The format applied when exporting.",
-  "set.abrir": "Open the PDF when finished",
-  "set.carpeta": "Output folder",
-  "set.carpetaDesc": "Empty = next to the note.",
-  "set.textos": "Texts",
-  "set.textosDesc": 'Text that the format prints, like the footer notice. A note can override it from its frontmatter with {{fm.<field>}}.',
-  "grupo.pie": "Footer",
-  "set.personalizacion": "Customization",
-  "set.personalizacionDesc":
+  "set.openWhenDone": "Open the PDF when finished",
+  "set.outputFolder": "Output folder",
+  "set.outputFolderDesc": "Empty = next to the note.",
+  "set.texts": "Texts",
+  "set.textsDesc":
+    'Text that the format prints, like the footer notice. A note can override it from its frontmatter with {{fm.<field>}}.',
+  "group.footer": "Footer",
+  "set.customization": "Customization",
+  "set.customizationDesc":
     'These controls come from the tokenSchema of "{id}". Changes are saved as overrides and never touch the theme pack.',
-  "set.restablecer": "Reset all",
-  "set.volverAlTheme": "Back to the theme value",
-  "set.noCarga": "Could not load the theme",
-  "grupo.paleta": "Palette",
-  "grupo.tipografia": "Typography",
-  "grupo.portada": "Cover",
-  "grupo.otros": "Other",
-  "cmd.exportar": "Export to PDF",
-  "cmd.exportarRapido": "Export to PDF with the last format (no prompt)",
+  "set.resetAll": "Reset all",
+  "set.backToThemeValue": "Back to the theme value",
+  "set.loadError": "Could not load the theme",
+  "group.palette": "Palette",
+  "group.typography": "Typography",
+  "group.cover": "Cover",
+  "group.other": "Other",
+  "cmd.export": "Export to PDF",
+  "cmd.exportQuick": "Export to PDF with the last format (no prompt)",
   "ribbon": "Pressmark: export to PDF",
-  "menu.exportar": "Pressmark: export to PDF",
-  "notice.abriNota": "Open a Markdown note first.",
-  "notice.exportando": "Exporting {n}…",
-  "notice.noPudeExportar": "Could not export: {e}",
-  "notice.noPudePreview": "Could not build the preview: {e}",
+  "menu.export": "Pressmark: export to PDF",
+  "notice.openNote": "Open a Markdown note first.",
+  "notice.exporting": "Exporting {n}…",
+  "notice.exportError": "Could not export: {e}",
+  "notice.previewError": "Could not build the preview: {e}",
 };
 
-export type Clave = keyof typeof EN;
+export type Key = keyof typeof EN;
 
-const ES: Partial<Record<Clave, string>> = {
-  "modal.titulo": "Pressmark · Exportar a PDF",
-  "modal.formato": "Formato",
-  "modal.formatoDesc": "El theme pack que se aplica.",
-  "modal.papel": "Tamaño de papel",
-  "modal.delFormato": "El del formato",
-  "modal.orientacion": "Orientación",
-  "modal.vertical": "Vertical",
-  "modal.horizontal": "Horizontal",
-  "modal.margen": "Margen",
-  "modal.margenDesc": "En milímetros, parejo en los cuatro lados. Vacío = el del formato.",
-  "modal.margenPlaceholder": "del formato",
-  "modal.margenInvalido": "El margen tiene que ser un número en milímetros.",
-  "modal.portada": "Portada",
-  "modal.portadaDesc": "El primer título y su metadata en carilla aparte.",
-  "modal.conPortada": "Con portada",
-  "modal.sinPortada": "Sin portada",
-  "modal.carpeta": "Carpeta de salida",
-  "modal.carpetaDesc": "Vacío = junto a la nota.",
-  "modal.carpetaPlaceholder": "junto a la nota",
-  "modal.abrir": "Abrir al terminar",
-  "modal.cancelar": "Cancelar",
-  "modal.exportar": "Exportar a PDF",
-  "modal.carilla": "carilla {n}",
-  "modal.errorFormato": "No pude cargar el formato: {e}",
-  "info.vertical": "vertical",
-  "info.horizontal": "horizontal",
-  "info.margenes": "márgenes",
-  "info.conPortada": "con portada",
-  "info.sinPortada": "sin portada",
-  "info.conPie": "con pie",
-  "info.carillas": "~{n} carilla(s)",
-  "info.propio": "propio",
-  "set.exportacion": "Exportación",
+const ES: Partial<Record<Key, string>> = {
+  "modal.title": "Pressmark · Exportar a PDF",
+  "modal.format": "Formato",
+  "modal.formatDesc": "El theme pack que se aplica.",
+  "modal.paperSize": "Tamaño de papel",
+  "modal.fromFormat": "El del formato",
+  "modal.orientation": "Orientación",
+  "modal.portrait": "Vertical",
+  "modal.landscape": "Horizontal",
+  "modal.margin": "Margen",
+  "modal.marginDesc": "En milímetros, parejo en los cuatro lados. Vacío = el del formato.",
+  "modal.marginPlaceholder": "del formato",
+  "modal.marginInvalid": "El margen tiene que ser un número en milímetros.",
+  "modal.cover": "Portada",
+  "modal.coverDesc": "El primer título y su metadata en carilla aparte.",
+  "modal.withCover": "Con portada",
+  "modal.withoutCover": "Sin portada",
+  "modal.outputFolder": "Carpeta de salida",
+  "modal.outputFolderDesc": "Vacío = junto a la nota.",
+  "modal.outputFolderPlaceholder": "junto a la nota",
+  "modal.openWhenDone": "Abrir al terminar",
+  "modal.cancel": "Cancelar",
+  "modal.export": "Exportar a PDF",
+  "modal.page": "carilla {n}",
+  "modal.formatError": "No pude cargar el formato: {e}",
+  "info.portrait": "vertical",
+  "info.landscape": "horizontal",
+  "info.margins": "márgenes",
+  "info.withCover": "con portada",
+  "info.withoutCover": "sin portada",
+  "info.withFooter": "con pie",
+  "info.pages": "~{n} carilla(s)",
+  "info.custom": "propio",
+  "set.export": "Exportación",
   "set.themePack": "Theme pack",
   "set.themePackDesc": "El formato que se aplica al exportar.",
-  "set.abrir": "Abrir el PDF al terminar",
-  "set.carpeta": "Carpeta de salida",
-  "set.carpetaDesc": "Vacío = junto a la nota.",
-  "set.textos": "Textos",
-  "set.textosDesc": 'Textos que el formato imprime, como el aviso del pie. Una nota puede pisarlos desde su frontmatter con {{fm.<campo>}}.',
-  "grupo.pie": "Pie de página",
-  "set.personalizacion": "Personalización",
-  "set.personalizacionDesc":
+  "set.openWhenDone": "Abrir el PDF al terminar",
+  "set.outputFolder": "Carpeta de salida",
+  "set.outputFolderDesc": "Vacío = junto a la nota.",
+  "set.texts": "Textos",
+  "set.textsDesc":
+    'Textos que el formato imprime, como el aviso del pie. Una nota puede pisarlos desde su frontmatter con {{fm.<campo>}}.',
+  "group.footer": "Pie de página",
+  "set.customization": "Personalización",
+  "set.customizationDesc":
     'Estos controles salen del tokenSchema de "{id}". Los cambios se guardan como overrides y no tocan el theme pack.',
-  "set.restablecer": "Restablecer todo",
-  "set.volverAlTheme": "Volver al valor del theme",
-  "set.noCarga": "No pude cargar el theme",
-  "grupo.paleta": "Paleta",
-  "grupo.tipografia": "Tipografía",
-  "grupo.portada": "Portada",
-  "grupo.otros": "Otros",
-  "cmd.exportar": "Exportar a PDF",
-  "cmd.exportarRapido": "Exportar a PDF con el último formato (sin preguntar)",
+  "set.resetAll": "Restablecer todo",
+  "set.backToThemeValue": "Volver al valor del theme",
+  "set.loadError": "No pude cargar el theme",
+  "group.palette": "Paleta",
+  "group.typography": "Tipografía",
+  "group.cover": "Portada",
+  "group.other": "Otros",
+  "cmd.export": "Exportar a PDF",
+  "cmd.exportQuick": "Exportar a PDF con el último formato (sin preguntar)",
   "ribbon": "Pressmark: exportar a PDF",
-  "menu.exportar": "Pressmark: exportar a PDF",
-  "notice.abriNota": "Abrí una nota de Markdown primero.",
-  "notice.exportando": "Exportando {n}…",
-  "notice.noPudeExportar": "No pude exportar: {e}",
-  "notice.noPudePreview": "No pude preparar la vista previa: {e}",
+  "menu.export": "Pressmark: exportar a PDF",
+  "notice.openNote": "Abrí una nota de Markdown primero.",
+  "notice.exporting": "Exportando {n}…",
+  "notice.exportError": "No pude exportar: {e}",
+  "notice.previewError": "No pude preparar la vista previa: {e}",
 };
 
-const IDIOMAS: Record<string, Partial<Record<Clave, string>>> = { en: EN, es: ES };
+const LANGUAGES: Record<string, Partial<Record<Key, string>>> = { en: EN, es: ES };
 
-let actual: Partial<Record<Clave, string>> = EN;
+let current: Partial<Record<Key, string>> = EN;
 let locale = "en";
 
-/** Se llama una vez al cargar el plugin. */
-export function iniciarIdioma(): string {
-  locale = idiomaDeObsidian();
-  // Se reusa la misma cadena de respaldo que los theme packs, para que la UI y
-  // el documento nunca queden en idiomas distintos.
-  const disponibles: Record<string, string> = {};
-  for (const k of Object.keys(IDIOMAS)) disponibles[k] = k;
-  actual = IDIOMAS[resolve(disponibles, locale)] ?? EN;
+/** Called once when the plugin loads. */
+export function initLanguage(): string {
+  locale = obsidianLanguage();
+  // Reuses the same fallback chain as the theme packs, so the UI and the
+  // document never end up in different languages.
+  const available: Record<string, string> = {};
+  for (const k of Object.keys(LANGUAGES)) available[k] = k;
+  current = LANGUAGES[resolve(available, locale)] ?? EN;
   return locale;
 }
 
-/** El idioma resuelto, para pasarselo a los theme packs. */
-export function idioma(): string {
+/** The resolved language, to pass along to the theme packs. */
+export function language(): string {
   return locale;
 }
 
-/** Traduce. Una clave sin traducir cae al ingles, nunca a la clave cruda. */
-export function t(clave: Clave, params?: Record<string, string | number>): string {
-  let s = actual[clave] ?? EN[clave];
+/** Translates. An untranslated key falls back to English, never to the raw key. */
+export function t(key: Key, params?: Record<string, string | number>): string {
+  let s = current[key] ?? EN[key];
   if (params) {
     for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
   }

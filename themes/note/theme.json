@@ -1,6 +1,6 @@
 {
   "$schema": "../theme.schema.json",
-  "id": "nota",
+  "id": "note",
   "name": {
     "en": "Note",
     "es": "Nota"

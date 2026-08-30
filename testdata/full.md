@@ -41,8 +41,8 @@ func (r *Renderer) PrintToPDF(ctx context.Context, opts PageOptions) ([]byte, er
 Sin lenguaje declarado:
 
 ```
-$ pressmark informe.md --theme ejecutivo
-✓ informe.pdf  (284 KB)
+$ pressmark report.md --theme executive
+✓ report.pdf  (284 KB)
 ```
 
 ## Listas

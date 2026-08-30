@@ -1,5 +1,5 @@
-// Package browser maneja Chrome por CDP. No hay Puppeteer, no hay Node: solo
-// el Chrome que ya esta instalado en la maquina.
+// Package browser drives Chrome over CDP. There is no Puppeteer, no Node:
+// just the Chrome already installed on the machine.
 package browser
 
 import (
@@ -16,7 +16,7 @@ import (
 )
 
 type PDFOptions struct {
-	PaperWidth   float64 // pulgadas
+	PaperWidth   float64 // inches
 	PaperHeight  float64
 	MarginTop    float64
 	MarginRight  float64
@@ -36,8 +36,8 @@ type Chrome struct {
 	cancel context.CancelFunc
 }
 
-// New levanta Chrome una sola vez. Convertir 20 archivos no deberia levantar 20
-// navegadores: por eso la instancia se reusa.
+// New starts Chrome exactly once. Converting 20 files should not start 20
+// browsers: that's why the instance is reused.
 func New(ctx context.Context, execPath string) (*Chrome, error) {
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.NoSandbox,
@@ -54,7 +54,7 @@ func New(ctx context.Context, execPath string) (*Chrome, error) {
 	if err := chromedp.Run(taskCtx); err != nil {
 		taskCancel()
 		allocCancel()
-		return nil, fmt.Errorf("no pude levantar Chrome: %w", err)
+		return nil, fmt.Errorf("could not start Chrome: %w", err)
 	}
 	return &Chrome{alloc: allocCancel, ctx: taskCtx, cancel: taskCancel}, nil
 }
@@ -64,15 +64,15 @@ func (c *Chrome) Close() {
 	c.alloc()
 }
 
-// PDF carga el HTML y lo imprime.
+// PDF loads the HTML and prints it.
 //
-// El HTML se escribe a un archivo temporal AL LADO del .md de origen y se carga
-// con file://. Suena rebuscado y no lo es: es lo unico que hace que las rutas
-// relativas de las imagenes resuelvan como el autor las escribio.
+// The HTML is written to a temp file NEXT TO the source .md and loaded with
+// file://. It sounds convoluted and it isn't: it's the only thing that makes
+// relative image paths resolve the way the author wrote them.
 func (c *Chrome) PDF(htmlDoc []byte, baseDir string, opts PDFOptions, prep ...Prep) ([]byte, error) {
 	tmp, err := os.CreateTemp(baseDir, ".pressmark-*.html")
 	if err != nil {
-		return nil, fmt.Errorf("no pude crear el temporal en %s: %w", baseDir, err)
+		return nil, fmt.Errorf("could not create the temp file in %s: %w", baseDir, err)
 	}
 	defer os.Remove(tmp.Name())
 	if _, err := tmp.Write(htmlDoc); err != nil {
@@ -89,19 +89,19 @@ func (c *Chrome) PDF(htmlDoc []byte, baseDir string, opts PDFOptions, prep ...Pr
 	ctx, cancel := context.WithTimeout(c.ctx, 90*time.Second)
 	defer cancel()
 
-	acciones := []chromedp.Action{
+	actions := []chromedp.Action{
 		chromedp.Navigate("file://" + abs),
 		chromedp.WaitReady("body", chromedp.ByQuery),
-		// Sin esto, un tipo aun sin cargar imprime con la fuente de reemplazo
-		// y el documento sale con otra metrica.
+		// Without this, a typeface still loading prints with the fallback font
+		// and the document comes out with different metrics.
 		AwaitJS(`document.fonts.ready`),
 	}
 	for _, p := range prep {
-		acciones = append(acciones, p(&opts))
+		actions = append(actions, p(&opts))
 	}
 
 	var pdf []byte
-	acciones = append(acciones, chromedp.ActionFunc(func(ctx context.Context) error {
+	actions = append(actions, chromedp.ActionFunc(func(ctx context.Context) error {
 		p := page.PrintToPDF().
 			WithPrintBackground(opts.Background).
 			WithPaperWidth(opts.PaperWidth).
@@ -111,8 +111,8 @@ func (c *Chrome) PDF(htmlDoc []byte, baseDir string, opts PDFOptions, prep ...Pr
 			WithMarginBottom(opts.MarginBottom).
 			WithMarginLeft(opts.MarginLeft).
 			WithLandscape(opts.Landscape).
-			// Falso a proposito: el tamano lo manda theme.json, no un @page
-			// que se le haya colado al CSS. Fuente unica de verdad.
+			// Deliberately false: the size comes from theme.json, not from an
+			// @page that slipped into the CSS. Single source of truth.
 			WithPreferCSSPageSize(false).
 			WithDisplayHeaderFooter(opts.ShowBands)
 		if opts.ShowBands {
@@ -126,30 +126,30 @@ func (c *Chrome) PDF(htmlDoc []byte, baseDir string, opts PDFOptions, prep ...Pr
 		return err
 	}))
 
-	if err := chromedp.Run(ctx, acciones...); err != nil {
+	if err := chromedp.Run(ctx, actions...); err != nil {
 		return nil, err
 	}
 	return pdf, nil
 }
 
-// Prep es un paso que corre con la pagina cargada y ANTES de imprimir.
-// Ahi entra mermaid: se espera a que su render asincrono resuelva.
+// Prep is a step that runs with the page loaded and BEFORE printing. This is
+// where mermaid comes in: it waits for its asynchronous render to resolve.
 type Prep func(*PDFOptions) chromedp.Action
 
-// AwaitJS evalua una expresion y ESPERA a que su promesa resuelva.
+// AwaitJS evaluates an expression and WAITS for its promise to resolve.
 //
-// Esta es la pieza que hace innecesario a mmdc. El script viejo pre-renderizaba
-// los diagramas con un binario aparte porque "Puppeteer imprime sin esperar el
-// render asincrono de mermaid". Eso era cierto del pipeline cerrado de
-// md-to-pdf, no de CDP: manejando Chrome uno mismo se pide awaitPromise y no
-// hay carrera que perder.
+// This is the piece that makes mmdc unnecessary. The old script pre-rendered
+// diagrams with a separate binary because "Puppeteer prints without waiting
+// for mermaid's asynchronous render". That was true of the closed pipeline of
+// md-to-pdf, not of CDP: driving Chrome ourselves lets us ask for
+// awaitPromise and there is no race to lose.
 func AwaitJS(expr string) chromedp.Action {
 	return chromedp.Evaluate(expr, nil, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
 		return p.WithAwaitPromise(true)
 	})
 }
 
-// BandOrEmpty: Chrome revienta con un template vacio, hay que darle algo.
+// BandOrEmpty: Chrome blows up with an empty template, so it needs something.
 func BandOrEmpty(s string) string {
 	if strings.TrimSpace(s) == "" {
 		return "<span></span>"
