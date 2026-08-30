@@ -1,6 +1,6 @@
 {
   "name": "pressmark",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Export Obsidian notes to PDF with portable theme packs.",
   "main": "main.js",
   "private": true,
@@ -24,7 +24,6 @@
     "@types/bun": "^1.4.0",
     "@types/node": "^22.10.2",
     "ajv": "^8.17.1",
-    "builtin-modules": "^4.0.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.9.1",
     "eslint-plugin-obsidianmd": "^0.4.2",

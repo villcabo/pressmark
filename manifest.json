@@ -1,7 +1,7 @@
 {
   "id": "pressmark",
   "name": "Pressmark",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "minAppVersion": "1.8.7",
   "description": "Export notes to PDF with portable theme packs: versionable formats you can share with your team. The same packs the Pressmark CLI uses, so terminal and vault produce identical documents.",
   "author": "Bismarck Villca",

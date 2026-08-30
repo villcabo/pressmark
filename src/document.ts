@@ -24,7 +24,7 @@ export function tokensCSS(tokens: Record<string, string> | undefined): string {
 export function coverCSS(t: Resolved): string {
   if (!t.cover?.enabled) return "";
   if (t.cover.break === "none") return "";
-  return `.${WRAPPER} > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }\n`;
+  return `.${WRAPPER} > hr:first-of-type { page-break-after: always; border: none; margin: 0; height: 0; }\n`;
 }
 
 /**

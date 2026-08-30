@@ -41,7 +41,7 @@ html { font-size: 10.5pt; }
   line-height: 1.95;
 }
 
-.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+.pm-doc > hr:first-of-type { page-break-after: always; border: none; margin: 0; height: 0; }
 
 /* ── Density ──────────────────────────────────────────────────────────── */
 

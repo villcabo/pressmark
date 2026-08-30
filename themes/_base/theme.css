@@ -33,14 +33,12 @@
 }
 
 /* ── Headings ────────────────────────────────────────────────────────────
-   break-after: avoid keeps a heading from being stranded at the page foot. */
+   page-break-after: avoid keeps a heading from being stranded at the page foot. */
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.25;
-  break-after: avoid;
   page-break-after: avoid;
-  break-inside: avoid;
   page-break-inside: avoid;
   letter-spacing: -0.15pt;
 }
@@ -89,7 +87,6 @@ blockquote {
   border-left: 2pt solid var(--notice);
   background: var(--notice-bg);
   color: #5c3d0c;
-  break-inside: avoid;
   page-break-inside: avoid;
 }
 blockquote p:last-child { margin-bottom: 0; }
@@ -124,7 +121,6 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.45;
-  break-inside: avoid;
   page-break-inside: avoid;
   color: var(--ink);
 }
@@ -140,12 +136,11 @@ table {
   width: 100%;
   margin: 1.1em 0;
   font-size: 0.89em;
-  break-inside: auto;
   page-break-inside: auto;
 }
 
 thead { display: table-header-group; }   /* repeats the header on every page */
-tr { break-inside: avoid; page-break-inside: avoid; }
+tr { page-break-inside: avoid; }
 
 th {
   background: none;
@@ -177,7 +172,7 @@ table code { font-size: 0.88em; white-space: normal; }
 
 /* ── Images ──────────────────────────────────────────────────────────── */
 
-img { max-width: 100%; height: auto; break-inside: avoid; page-break-inside: avoid; }
+img { max-width: 100%; height: auto; page-break-inside: avoid; }
 
 /* ── Mermaid diagrams ─────────────────────────────────────────────────────
    The renderer emits <pre class="mermaid"> and mermaid.js replaces its content
@@ -195,7 +190,6 @@ pre.mermaid {
   background: none;
   border: none;
   text-align: center;
-  break-inside: avoid;
   page-break-inside: avoid;
 }
 
@@ -212,7 +206,7 @@ nav#TOC {
   background: var(--accent-soft);
   padding: 1em 1.4em;
   margin-bottom: 2em;
-  break-after: page;
+  page-break-after: always;
   font-size: 0.92em;
 }
 nav#TOC > ul { padding-left: 1em; }

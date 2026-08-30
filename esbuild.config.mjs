@@ -1,23 +1,15 @@
 import esbuild from "esbuild";
-import builtins from "builtin-modules";
 
 const production = process.argv[2] === "production";
 
 const ctx = await esbuild.context({
   entryPoints: ["src/main.ts"],
   bundle: true,
-  // Obsidian and Node's builtins are provided by the host: bundling them
-  // breaks the plugin. Both forms have to be listed — builtin-modules
-  // returns "fs" and an `import ... from "node:fs/promises"` doesn't match
-  // that.
-  external: [
-    "obsidian",
-    "electron",
-    "@electron/remote",
-    ...builtins,
-    ...builtins.map((m) => `node:${m}`),
-    ...builtins.map((m) => `node:${m}/promises`),
-  ],
+  // Provided by the host at runtime; bundling them breaks the plugin. The
+  // source imports no Node builtins any more — the temp file the print window
+  // needs goes through the Vault API instead of node:fs — so nothing else
+  // belongs in this list.
+  external: ["obsidian", "electron", "@electron/remote"],
   format: "cjs",
   target: "es2022",
   logLevel: "info",

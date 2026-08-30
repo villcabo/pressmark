@@ -135,7 +135,7 @@ func TestCoverCSS(t *testing.T) {
 		t.Error("break none should not force a page break")
 	}
 	got := CoverCSS(&theme.Cover{Enabled: ptr(true), Break: ptr("page")})
-	if !strings.Contains(got, "."+Wrapper+" > hr:first-of-type") || !strings.Contains(got, "break-after: page") {
+	if !strings.Contains(got, "."+Wrapper+" > hr:first-of-type") || !strings.Contains(got, "page-break-after: always") {
 		t.Errorf("got %q", got)
 	}
 }
