@@ -45,7 +45,7 @@ html { font-size: 10pt; }
 
 /* No cover page: the first separator is just another rule, not a page break */
 .pm-doc > hr:first-of-type {
-  break-after: auto;
+  page-break-after: auto;
   border: 0;
   border-top: 0.5pt solid var(--rule);
   margin: 1.4em 0;

@@ -36,7 +36,7 @@ html { font-size: 9.5pt; }
   line-height: 1.75;
 }
 
-.pm-doc > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }
+.pm-doc > hr:first-of-type { page-break-after: always; border: none; margin: 0; height: 0; }
 
 /* ── Compact headings, easy to number at a glance ────────────────────── */
 

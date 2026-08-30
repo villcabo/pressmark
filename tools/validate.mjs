@@ -10,55 +10,55 @@ import { fileURLToPath } from "node:url";
 import Ajv from "ajv";
 
 const T = join(dirname(fileURLToPath(import.meta.url)), "..", "themes");
-const leer = (p) => JSON.parse(readFileSync(p, "utf8"));
+const read = (p) => JSON.parse(readFileSync(p, "utf8"));
 
-const schema = leer(join(T, "theme.schema.json"));
-const base = leer(join(T, "_base", "theme.json"));
+const schema = read(join(T, "theme.schema.json"));
+const base = read(join(T, "_base", "theme.json"));
 const declarados = new Set(Object.keys(base.tokenSchema ?? {}));
 
 const ajv = new Ajv({ allErrors: true, strict: false });
-const valida = ajv.compile(schema);
+const validate = ajv.compile(schema);
 
-const errores = [];
+const errors = [];
 const dirs = readdirSync(T).filter((n) => statSync(join(T, n)).isDirectory()).sort();
 
-for (const nombre of dirs) {
-  const d = join(T, nombre);
+for (const name of dirs) {
+  const d = join(T, name);
   const fj = join(d, "theme.json");
   const fc = join(d, "theme.css");
 
-  if (!existsSync(fj)) { errores.push(`${nombre}: missing theme.json`); continue; }
-  if (!existsSync(fc)) errores.push(`${nombre}: missing theme.css`);
+  if (!existsSync(fj)) { errors.push(`${name}: missing theme.json`); continue; }
+  if (!existsSync(fc)) errors.push(`${name}: missing theme.css`);
 
-  const t = leer(fj);
+  const t = read(fj);
 
-  if (!valida(t)) {
-    for (const e of valida.errors) {
-      errores.push(`${nombre}: ${e.instancePath || "(raiz)"} ${e.message}`);
+  if (!validate(t)) {
+    for (const e of validate.errors) {
+      errors.push(`${name}: ${e.instancePath || "(raiz)"} ${e.message}`);
     }
   }
 
-  if (t.id !== nombre) errores.push(`${nombre}: id "${t.id}" does not match the folder name`);
+  if (t.id !== name) errors.push(`${name}: id "${t.id}" does not match the folder name`);
 
-  const propios = new Set(Object.keys(t.tokenSchema ?? {}));
-  const huerfanos = Object.keys(t.tokens ?? {})
-    .filter((k) => !declarados.has(k) && !propios.has(k));
-  if (huerfanos.length) {
-    errores.push(`${nombre}: tokens not declared in tokenSchema: ${huerfanos.join(", ")}`);
+  const own = new Set(Object.keys(t.tokenSchema ?? {}));
+  const orphans = Object.keys(t.tokens ?? {})
+    .filter((k) => !declarados.has(k) && !own.has(k));
+  if (orphans.length) {
+    errors.push(`${name}: tokens not declared in tokenSchema: ${orphans.join(", ")}`);
   }
 
   // A varSchema declaring a var that does not exist is a form editing something
   // the footer will never read.
-  const declaradas = Object.keys(t.varSchema ?? {});
-  const existentes = new Set(Object.keys(t.vars ?? {}));
-  const fantasma = declaradas.filter((k) => !existentes.has(k));
-  if (fantasma.length) {
-    errores.push(`${nombre}: varSchema declares vars that do not exist: ${fantasma.join(", ")}`);
+  const declared = Object.keys(t.varSchema ?? {});
+  const existing = new Set(Object.keys(t.vars ?? {}));
+  const phantom = declared.filter((k) => !existing.has(k));
+  if (phantom.length) {
+    errors.push(`${name}: varSchema declares vars that do not exist: ${phantom.join(", ")}`);
   }
 
-  const padre = "extends" in t ? t.extends : "_base";
-  if (padre !== null && !existsSync(join(T, padre))) {
-    errores.push(`${nombre}: extends "${padre}" does not exist`);
+  const parent = "extends" in t ? t.extends : "_base";
+  if (parent !== null && !existsSync(join(T, parent))) {
+    errors.push(`${name}: extends "${parent}" does not exist`);
   }
 
   // Page geometry and the palette live ONLY in theme.json.
@@ -66,15 +66,27 @@ for (const nombre of dirs) {
     for (const [i, linea] of readFileSync(fc, "utf8").split("\n").entries()) {
       const s = linea.trim();
       if (s.startsWith("@page") || s.startsWith(":root")) {
-        errores.push(`${nombre}: theme.css:${i + 1} declara "${s.slice(0, 24)}" — that belongs in theme.json`);
+        errors.push(
+          `${name}: theme.css:${i + 1} declares "${s.slice(0, 24)}" — that belongs in theme.json`,
+        );
+      }
+      // The modern fragmentation properties belong to the multicolumn module,
+      // and Obsidian's CSS lint flags them as only partially supported. The
+      // legacy page-break-* aliases do the same thing in paged media and are
+      // universally supported, so those are the ones this project uses.
+      const modern = /(?<![-\w])(break-(?:after|before|inside))\s*:/.exec(s);
+      if (modern) {
+        errors.push(
+          `${name}: theme.css:${i + 1} uses "${modern[1]}" — use "page-${modern[1]}" instead`,
+        );
       }
     }
   }
 }
 
-if (errores.length) {
-  console.error(errores.map((e) => `  ✗ ${e}`).join("\n"));
-  console.error(`\n${errores.length} error(s)`);
+if (errors.length) {
+  console.error(errors.map((e) => `  ✗ ${e}`).join("\n"));
+  console.error(`\n${errors.length} error(s)`);
   process.exit(1);
 }
 console.log(`✓ ${dirs.length} theme packs valid (schema + token contract)`);

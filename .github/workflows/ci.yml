@@ -48,6 +48,14 @@ jobs:
           out=$(gofmt -l cli)
           if [ -n "$out" ]; then echo "sin formatear:"; echo "$out"; exit 1; fi
 
+      # src/themes.generated.ts is committed so a clean checkout has types for
+      # EMBEDDED without a build step. Committed generated files drift, so this
+      # proves it still matches themes/.
+      - name: Generated themes are up to date
+        run: |
+          node tools/gen-plugin-themes.mjs
+          git diff --exit-code -- src/themes.generated.ts
+
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 

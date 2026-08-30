@@ -83,7 +83,7 @@ func CoverCSS(c *theme.Cover) string {
 		return ""
 	}
 	return fmt.Sprintf(
-		".%s > hr:first-of-type { break-after: page; border: none; margin: 0; height: 0; }\n",
+		".%s > hr:first-of-type { page-break-after: always; border: none; margin: 0; height: 0; }\n",
 		Wrapper)
 }
 
