@@ -59,6 +59,7 @@ export interface TokenDef {
 }
 
 export interface Theme {
+  $schema?: string;
   id: string;
   name: Localized;
   description?: Localized;

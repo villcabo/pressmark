@@ -69,6 +69,15 @@ export class SettingsTab extends PluginSettingTab {
             },
           },
           {
+            name: t("set.saveAsFormat"),
+            desc: t("set.saveAsFormatDesc"),
+            action: (el) => {
+              el.createEl("button", { text: t("pack.save") }).addEventListener("click", () =>
+                this.plugin.promptSaveAsFormat(),
+              );
+            },
+          },
+          {
             name: t("set.openWhenDone"),
             control: { type: "toggle", key: "openWhenDone" },
           },
