@@ -15,7 +15,7 @@ import {
   normalizePath,
 } from "obsidian";
 import { load, type Resolved, type ThemeFS } from "./theme";
-import { embeddedFS, overlay, vaultFS, USER_THEMES_SUBFOLDER } from "./sources";
+import { embeddedFS, overlay, vaultFS, userThemesFolder, USER_THEMES_SUBFOLDER } from "./sources";
 import {
   bandHTML,
   documentHTML,
@@ -27,6 +27,8 @@ import {
 import { askWhereToSave, generate, printOptionsFor, writePdf } from "./pdf";
 import { applyOptions, ExportModal, type ExportOptions } from "./export-modal";
 import { SettingsTab } from "./settings";
+import { NameModal } from "./name-modal";
+import { buildThemePack, starterCSS } from "./pack";
 import { DEFAULT_SETTINGS, type Settings } from "./config";
 import { migrateSettings } from "./migrate";
 import { initLanguage, language, t } from "./i18n";
@@ -91,6 +93,12 @@ export default class PressmarkPlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "save-as-format",
+      name: t("cmd.saveAsFormat"),
+      callback: () => this.promptSaveAsFormat(),
+    });
+
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (!(file instanceof TFile) || file.extension !== "md") return;
@@ -113,6 +121,64 @@ export default class PressmarkPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /**
+   * Asks for a name and turns the current overrides into a theme pack.
+   *
+   * This is what makes a customization worth doing: an override lives in one
+   * person's data.json, a pack is a folder that can be committed and copied.
+   */
+  promptSaveAsFormat(): void {
+    const base = this.settings.theme;
+    const tokens = this.settings.overrides[base] ?? {};
+    const vars = this.settings.overridesVars[base] ?? {};
+
+    if (Object.keys(tokens).length === 0 && Object.keys(vars).length === 0) {
+      new Notice(t("pack.nothingToSave"));
+      return;
+    }
+
+    new NameModal(this.app, {
+      title: t("pack.title"),
+      placeholder: t("pack.placeholder"),
+      taken: (id) => this.themeIds.includes(id),
+      onSubmit: (name) => void this.saveAsFormat(name, base, tokens, vars),
+    }).open();
+  }
+
+  private async saveAsFormat(
+    name: string,
+    base: string,
+    tokens: Record<string, string>,
+    vars: Record<string, string>,
+  ): Promise<void> {
+    try {
+      const { id, json } = buildThemePack({ name, base, tokens, vars });
+      const dir = normalizePath(`${userThemesFolder(this.app.vault)}/${id}`);
+      const adapter = this.app.vault.adapter;
+
+      if (!(await adapter.exists(dir))) await adapter.mkdir(dir);
+      await adapter.write(
+        normalizePath(`${dir}/theme.json`),
+        JSON.stringify(json, null, 2) + "\n",
+      );
+      await adapter.write(normalizePath(`${dir}/theme.css`), starterCSS(name, base));
+
+      // The overrides became the pack: leaving them behind would apply the same
+      // changes twice, once in the pack and once on top of it.
+      delete this.settings.overrides[base];
+      delete this.settings.overridesVars[base];
+      this.settings.theme = id;
+      await this.saveSettings();
+
+      this.themeIds = await this.availableThemes();
+      await this.refreshActiveTheme();
+      new Notice(t("pack.saved", { name }));
+    } catch (e) {
+      console.error("pressmark:", e);
+      new Notice(t("pack.saveError", { e: e instanceof Error ? e.message : String(e) }));
+    }
   }
 
   /** Reloads the cached theme. Cheap: the packs are embedded or in the vault. */

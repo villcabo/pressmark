@@ -69,6 +69,21 @@ export class SettingsTab extends PluginSettingTab {
             },
           },
           {
+            name: t("set.saveAsFormat"),
+            desc: t("set.saveAsFormatDesc"),
+            // Obsidian calls action() again on every re-render, so this has to
+            // be idempotent: without emptying first, each refresh appends
+            // another button and they pile up.
+            action: (el) => {
+              el.empty();
+              el.createEl("button", { text: t("pack.save") }).addEventListener("click", () =>
+                this.plugin.promptSaveAsFormat(),
+              );
+            },
+            // Greyed out with nothing to save, rather than a click that scolds.
+            disabled: () => !this.hasOverrides(this.plugin.settings.theme),
+          },
+          {
             name: t("set.openWhenDone"),
             control: { type: "toggle", key: "openWhenDone" },
           },
@@ -88,6 +103,14 @@ export class SettingsTab extends PluginSettingTab {
       items.push(...this.editableGroups(theme, layer));
     }
     return items;
+  }
+
+  /** Whether a theme has anything worth saving as a pack. */
+  private hasOverrides(themeId: string): boolean {
+    return (
+      Object.keys(this.plugin.settings.overrides[themeId] ?? {}).length > 0 ||
+      Object.keys(this.plugin.settings.overridesVars[themeId] ?? {}).length > 0
+    );
   }
 
   /** Builds one group per schema group, plus its reset action. */
@@ -139,10 +162,18 @@ export class SettingsTab extends PluginSettingTab {
         items.push({
           name: t("set.resetAll"),
           action: (el) => {
+            el.empty();
             el.createEl("button", { text: t("set.resetAll"), cls: "mod-destructive" })
               .addEventListener("click", () => {
                 void this.resetLayer(theme.id, layer);
               });
+          },
+          disabled: () => {
+            const map =
+              layer === "tokens"
+                ? this.plugin.settings.overrides
+                : this.plugin.settings.overridesVars;
+            return Object.keys(map[theme.id] ?? {}).length === 0;
           },
         });
       }
