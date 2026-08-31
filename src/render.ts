@@ -20,7 +20,7 @@ export * from "./document";
  * blocks stop being DIRECT children of the wrapper and the cover page no
  * longer matches. Unwrapping them IS the contract, not tidiness.
  */
-function flatten(root: HTMLElement): void {
+export function flattenRendered(root: HTMLElement): void {
   const HTMLEl = root.doc.defaultView?.HTMLElement ?? HTMLElement;
   let changed = true;
   while (changed) {
@@ -87,6 +87,6 @@ export async function renderBody(
   const el = createDiv({ cls: WRAPPER });
   await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
   stripUI(el);
-  flatten(el);
+  flattenRendered(el);
   return el.innerHTML;
 }

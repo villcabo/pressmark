@@ -28,6 +28,7 @@ import { askWhereToSave, generate, printOptionsFor, writePdf } from "./pdf";
 import { applyOptions, ExportModal, type ExportOptions } from "./export-modal";
 import { SettingsTab } from "./settings";
 import { NameModal } from "./name-modal";
+import { DESIGNER_VIEW, DesignerView } from "./designer";
 import { buildThemePack, starterCSS } from "./pack";
 import { DEFAULT_SETTINGS, type Settings } from "./config";
 import { migrateSettings } from "./migrate";
@@ -63,6 +64,7 @@ export default class PressmarkPlugin extends Plugin {
 
     this.themeIds = await this.availableThemes();
     await this.refreshActiveTheme();
+    this.registerView(DESIGNER_VIEW, (leaf) => new DesignerView(leaf, this));
     this.addSettingTab(new SettingsTab(this.app, this));
 
     this.addRibbonIcon("file-output", t("ribbon"), () => {
@@ -94,6 +96,12 @@ export default class PressmarkPlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "open-designer",
+      name: t("designer.open"),
+      callback: () => void this.openDesigner(),
+    });
+
+    this.addCommand({
       id: "save-as-format",
       name: t("cmd.saveAsFormat"),
       callback: () => this.promptSaveAsFormat(),
@@ -121,6 +129,18 @@ export default class PressmarkPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /** Opens the designer, reusing its tab if one is already open. */
+  async openDesigner(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(DESIGNER_VIEW);
+    if (existing.length > 0 && existing[0]) {
+      await this.app.workspace.revealLeaf(existing[0]);
+      return;
+    }
+    const leaf = this.app.workspace.getLeaf(true);
+    await leaf.setViewState({ type: DESIGNER_VIEW, active: true });
+    await this.app.workspace.revealLeaf(leaf);
   }
 
   /**

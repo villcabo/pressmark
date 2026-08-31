@@ -9,8 +9,7 @@
  */
 import { App, Modal, Notice, Setting, type TFile } from "obsidian";
 import type { Resolved, Page } from "./theme";
-import { documentHTML } from "./render";
-import { paperSize } from "./paper";
+import { Preview } from "./preview";
 import { t } from "./i18n";
 
 export interface ExportOptions {
@@ -58,11 +57,7 @@ export const MARGIN_RE = /^\d+(\.\d+)?$/;
 
 export class ExportModal extends Modal {
   private o: ExportOptions;
-  private previewEl!: HTMLIFrameElement;
-  private canvasEl!: HTMLElement;
-  private scaleEl!: HTMLElement;
-  private breaksEl!: HTMLElement;
-  private infoEl!: HTMLElement;
+  private preview!: Preview;
   private theme?: Resolved;
 
   constructor(private a: Args) {
@@ -83,18 +78,9 @@ export class ExportModal extends Modal {
 
     const cols = contentEl.createDiv({ cls: "pressmark-cols" });
     const form = cols.createDiv({ cls: "pressmark-form" });
-    const previewPane = cols.createDiv({ cls: "pressmark-vista" });
+    const previewPane = cols.createDiv({ cls: "pressmark-view" });
 
-    // The iframe is drawn at the paper's REAL width and scaled down after. If
-    // it were left at the panel's width, the document would lay out at a
-    // different column width: lines would wrap differently and the preview
-    // would lie.
-    this.canvasEl = previewPane.createDiv({ cls: "pressmark-lienzo" });
-    this.scaleEl = this.canvasEl.createDiv({ cls: "pressmark-escala" });
-    this.previewEl = this.scaleEl.createEl("iframe", { cls: "pressmark-preview" });
-    this.previewEl.setAttr("sandbox", "allow-same-origin");
-    this.breaksEl = this.scaleEl.createDiv({ cls: "pressmark-cortes" });
-    this.infoEl = previewPane.createDiv({ cls: "pressmark-info" });
+    this.preview = new Preview(previewPane);
 
     this.buildForm(form);
 
@@ -178,92 +164,23 @@ export class ExportModal extends Modal {
   }
 
   private async refresh(): Promise<void> {
+    let theme: Resolved;
     try {
-      const base = await this.a.loadTheme(this.o.theme);
-      this.theme = applyOptions(base, this.o);
+      theme = applyOptions(await this.a.loadTheme(this.o.theme), this.o);
+      this.theme = theme;
     } catch (e) {
-      this.infoEl.setText(t("modal.formatError", { e: String(e) }));
+      this.preview.parts.info.setText(t("modal.formatError", { e: String(e) }));
       return;
     }
-    const theme = this.theme;
 
-    let w = 8.27,
-      h = 11.69;
-    try {
-      [w, h] = paperSize(theme.page);
-    } catch {
-      /* reported further below */
-    }
-    if (theme.page?.orientation === "landscape") [w, h] = [h, w];
-
-    // 96 CSS px per inch: the unit Chromium lays out in.
-    const widthPx = w * 96;
-    const heightPx = h * 96;
-
-    this.previewEl.style.width = `${widthPx}px`;
-    this.previewEl.srcdoc = documentHTML(this.a.title, this.a.bodyHTML, theme, true);
-
-    this.previewEl.onload = () => {
-      const doc = this.previewEl.contentDocument;
-      if (!doc) return;
-      // Real document height, rounded up to whole pages: so the last page
-      // shows complete and isn't cut in half.
-      const height = Math.max(doc.body.scrollHeight, heightPx);
-      const pages = Math.max(1, Math.ceil(height / heightPx));
-      const totalHeight = pages * heightPx;
-
-      this.previewEl.style.height = `${totalHeight}px`;
-      this.scaleEl.style.width = `${widthPx}px`;
-      this.scaleEl.style.height = `${totalHeight}px`;
-
-      // Lines where Chromium is going to break the page. It's approximate —
-      // the real break depends on break-inside — but it's enough to see
-      // whether a heading or a wide table ends up straddling two pages.
-      this.breaksEl.empty();
-      for (let i = 1; i < pages; i++) {
-        const line = this.breaksEl.createDiv({ cls: "pressmark-corte" });
-        line.style.top = `${i * heightPx}px`;
-        line.createSpan({ text: t("modal.page", { n: i + 1 }) });
-      }
-
-      this.fitScale(widthPx);
-      this.updateInfo(theme, pages);
-    };
+    // The drawing itself belongs to Preview, shared with the theme designer:
+    // two renderers would drift, and a preview that stops matching the export
+    // is worse than none.
+    this.preview.render(theme, this.a.title, this.a.bodyHTML);
 
     if (this.o.margin && !MARGIN_RE.test(this.o.margin)) {
       new Notice(t("modal.marginInvalid"));
     }
-  }
-
-  /** Scales the canvas so the page fits the panel's width. */
-  private fitScale(widthPx: number): void {
-    const available = this.canvasEl.clientWidth;
-    if (!available) return;
-    const f = Math.min(1, available / widthPx);
-    this.scaleEl.style.transform = `scale(${f})`;
-    // The page-break marks live inside the scaled element, so they'd shrink
-    // along with it. They're counter-scaled with this variable so they stay
-    // legible at any zoom.
-    this.scaleEl.style.setProperty("--pm-escala", String(f));
-    // The container has to reserve the height ALREADY SCALED, otherwise the
-    // scrollbar ends up as long as the unscaled document.
-    this.canvasEl.style.height = `${Math.min(520, this.scaleEl.offsetHeight * f)}px`;
-  }
-
-  private updateInfo(theme: Resolved, pages: number): void {
-    const m = theme.page?.margin;
-    const size = typeof theme.page?.size === "string" ? theme.page.size : t("info.custom");
-    const orient = theme.page?.orientation === "landscape" ? t("info.landscape") : t("info.portrait");
-    this.infoEl.setText(
-      [
-        size,
-        orient,
-        `${t("info.margins")} ${m?.top ?? "?"} ${m?.right ?? "?"} ${m?.bottom ?? "?"} ${m?.left ?? "?"}`,
-        theme.cover?.enabled ? t("info.withCover") : t("info.withoutCover"),
-        ...(theme.footer?.enabled ? [t("info.withFooter")] : []),
-        t("info.pages", { n: pages }),
-      ].join(" · "),
-    );
   }
 
   override onClose(): void {

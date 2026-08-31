@@ -23,10 +23,10 @@
 
 .pressmark-form .setting-item { padding: 0.5em 0; border: none; }
 
-.pressmark-vista { position: sticky; top: 0; }
+.pressmark-view { position: sticky; top: 0; }
 
 /* El lienzo recorta y da scroll; adentro va la carilla a escala real. */
-.pressmark-lienzo {
+.pressmark-canvas {
   overflow: auto;
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
@@ -37,10 +37,10 @@
 /* Se dibuja al tamano REAL del papel y se achica con transform. Achicar el
    iframe en vez de escalarlo cambiaria el ancho de columna y la vista previa
    dejaria de predecir donde cortan las lineas. */
-.pressmark-escala {
+.pressmark-scale {
   position: relative;
   transform-origin: top left;
-  --pm-escala: 1;
+  --pm-scale: 1;
 }
 
 .pressmark-preview {
@@ -52,31 +52,31 @@
 
 /* Donde Chromium va a cortar. Aproximado, pero suficiente para ver si un
    titulo o una tabla quedan a caballo entre dos carillas. */
-.pressmark-cortes {
+.pressmark-breaks {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.pressmark-corte {
+.pressmark-break {
   position: absolute;
   left: 0;
   right: 0;
-  /* Contra-escalado: el contenedor esta a scale(--pm-escala) y sin esto la
+  /* Contra-escalado: el contenedor esta a scale(--pm-scale) y sin esto la
      linea se afinaria hasta desaparecer. */
-  border-top: calc(1.5px / var(--pm-escala)) dashed rgb(220 38 38 / 60%);
+  border-top: calc(1.5px / var(--pm-scale)) dashed rgb(220 38 38 / 60%);
 }
 
-.pressmark-corte span {
+.pressmark-break span {
   position: absolute;
-  right: calc(8px / var(--pm-escala));
-  top: calc(5px / var(--pm-escala));
-  padding: calc(2px / var(--pm-escala)) calc(7px / var(--pm-escala));
-  border-radius: calc(3px / var(--pm-escala));
+  right: calc(8px / var(--pm-scale));
+  top: calc(5px / var(--pm-scale));
+  padding: calc(2px / var(--pm-scale)) calc(7px / var(--pm-scale));
+  border-radius: calc(3px / var(--pm-scale));
   background: rgb(220 38 38 / 85%);
   color: #fff;
   font-family: var(--font-interface);
-  font-size: calc(11px / var(--pm-escala));
+  font-size: calc(11px / var(--pm-scale));
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -86,4 +86,48 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1.5;
+}
+
+/* ── Theme designer ──────────────────────────────────────────────────── */
+
+.pressmark-designer-cols {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 1.5em;
+  align-items: start;
+  height: 100%;
+}
+
+.pressmark-designer-controls {
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+  padding-right: 0.5em;
+}
+
+.pressmark-designer-controls .setting-item { padding: 0.5em 0; border: none; }
+
+.pressmark-designer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+  margin-bottom: 0.8em;
+}
+
+.pressmark-designer-bar .setting-item {
+  border: none;
+  padding: 0;
+  flex: 1;
+}
+
+.pressmark-maximize { white-space: nowrap; }
+
+/* Maximized, the controls step aside and the page gets the whole view: a
+   column is fine for nudging a colour and useless for judging a page. */
+.pressmark-designer.is-maximized .pressmark-designer-cols {
+  grid-template-columns: 1fr;
+}
+
+.pressmark-designer.is-maximized .pressmark-designer-controls {
+  display: none;
 }
