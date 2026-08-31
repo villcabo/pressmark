@@ -167,13 +167,36 @@ export class DesignerView extends ItemView {
 
     for (const layer of ["tokens", "vars"] as const) this.layerControls(c, theme, layer);
 
-    new Setting(c).addButton((b) =>
-      b
-        .setButtonText(t("set.saveAsFormat"))
-        .setCta()
-        .setDisabled(!this.hasOverrides())
-        .onClick(() => this.plugin.promptSaveAsFormat()),
-    );
+    new Setting(c)
+      .addButton((b) =>
+        b
+          .setButtonText(t("set.saveAsFormat"))
+          .setCta()
+          .setDisabled(!this.hasOverrides())
+          .onClick(() => this.plugin.promptSaveAsFormat()),
+      )
+      // Reset applies wherever there are overrides. On a saved pack the values
+      // live in the pack itself, so there is usually nothing to reset and the
+      // button says so by being disabled.
+      .addButton((b) =>
+        b
+          .setButtonText(t("set.resetAll"))
+          .setDestructive()
+          .setDisabled(!this.hasOverrides())
+          .onClick(() => void this.resetOverrides()),
+      );
+  }
+
+  /** Clears every override on the selected theme and redraws. */
+  private async resetOverrides(): Promise<void> {
+    const id = this.plugin.settings.theme;
+    delete this.plugin.settings.overrides[id];
+    delete this.plugin.settings.overridesVars[id];
+    await this.plugin.saveSettings();
+    await this.plugin.refreshActiveTheme();
+    this.theme = this.plugin.activeTheme;
+    this.buildControls();
+    this.redraw();
   }
 
   private hasOverrides(): boolean {

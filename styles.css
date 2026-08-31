@@ -28,6 +28,9 @@
 /* El lienzo recorta y da scroll; adentro va la carilla a escala real. */
 .pressmark-canvas {
   overflow: auto;
+  /* Breathing room around the sheets so they read as paper on a desk rather
+     than as panels butted against the edge. */
+  padding: 18px 0 24px;
   /* The stage carries the page's visual size, so centring it here puts the
      page in the middle instead of pinned to the left with dead space beside. */
   display: flex;
@@ -64,7 +67,8 @@
   overflow: hidden;
   background: #fff;
   box-shadow: 0 2px 12px rgb(0 0 0 / 22%);
-  margin-bottom: calc(18px / var(--pm-scale, 1));
+  margin-bottom: calc(26px / var(--pm-scale, 1));
+  border-radius: calc(2px / var(--pm-scale, 1));
 }
 
 .pressmark-sheet:last-child { margin-bottom: 0; }

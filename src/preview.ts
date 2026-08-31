@@ -121,7 +121,7 @@ export class Preview {
     this.contentPx = Math.max(120, heightPx - mt - mb);
     this.marginTopPx = mt;
 
-    this.probe.setCssProps({ width: `${widthPx}px` });
+    this.probe.setCssStyles({ width: `${widthPx}px` });
     this.probe.srcdoc = html;
     this.probe.onload = () => {
       const doc = this.probe.contentDocument;
@@ -148,13 +148,13 @@ export class Preview {
 
     for (let i = 0; i < shown; i++) {
       const sheet = this.sheets.createDiv({ cls: "pressmark-sheet" });
-      sheet.setCssProps({ width: `${widthPx}px`, height: `${heightPx}px` });
+      sheet.setCssStyles({ width: `${widthPx}px`, height: `${heightPx}px` });
 
       const frame = sheet.createEl("iframe", { cls: "pressmark-preview" });
       frame.setAttr("sandbox", "allow-same-origin");
       frame.srcdoc = html;
       // The same document in every sheet, shifted so each shows its own page.
-      frame.setCssProps({
+      frame.setCssStyles({
         width: `${widthPx}px`,
         height: `${this.contentPx * this.pages + this.marginTopPx}px`,
         // Page i starts at its own top margin, and each page shows one content
@@ -220,12 +220,16 @@ export class Preview {
   private applyScale(): void {
     if (!this.lastWidthPx) return;
     const f = this.factor();
-    this.sheets.setCssProps({ transform: `scale(${f})`, "--pm-scale": String(f) });
-    this.stage.setCssProps({
+    // setCssStyles for real properties, setCssProps for the variable: they are
+    // different methods, and sending `top` or `transform` through the latter
+    // is silently ignored — which is why every sheet was showing page one.
+    this.sheets.setCssStyles({ transform: `scale(${f})` });
+    this.sheets.setCssProps({ "--pm-scale": String(f) });
+    this.stage.setCssStyles({
       width: `${this.lastWidthPx * f}px`,
       height: `${this.sheets.scrollHeight * f}px`,
-      "--pm-scale": String(f),
     });
+    this.stage.setCssProps({ "--pm-scale": String(f) });
   }
 
   private caption(theme: Resolved): void {
