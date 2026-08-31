@@ -73,6 +73,15 @@
 
 .pressmark-sheet:last-child { margin-bottom: 0; }
 
+/* The page's content box. This is what clips, not the sheet: clipping at the
+   sheet leaves the margins showing text that belongs to the next page. */
+.pressmark-page {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
 /* The same document in every sheet, shifted so each shows its own page. */
 .pressmark-preview {
   position: absolute;

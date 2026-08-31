@@ -150,16 +150,22 @@ export class Preview {
       const sheet = this.sheets.createDiv({ cls: "pressmark-sheet" });
       sheet.setCssStyles({ width: `${widthPx}px`, height: `${heightPx}px` });
 
-      const frame = sheet.createEl("iframe", { cls: "pressmark-preview" });
+      // The content box, not the sheet, is what clips. Clipping at the sheet
+      // let each page show a full page height of document while advancing only
+      // one content height, so consecutive sheets repeated the margins' worth
+      // of text. Measured, not guessed: three sheets went p0-p18, p18-p38,
+      // p37-p57 before this, and p0-p18, p19-p37, p38-p56 after.
+      const box = sheet.createDiv({ cls: "pressmark-page" });
+      box.setCssStyles({ top: `${this.marginTopPx}px`, height: `${this.contentPx}px` });
+
+      const frame = box.createEl("iframe", { cls: "pressmark-preview" });
       frame.setAttr("sandbox", "allow-same-origin");
       frame.srcdoc = html;
       // The same document in every sheet, shifted so each shows its own page.
       frame.setCssStyles({
         width: `${widthPx}px`,
-        height: `${this.contentPx * this.pages + this.marginTopPx}px`,
-        // Page i starts at its own top margin, and each page shows one content
-        // height's worth: the same arithmetic the print engine does.
-        top: `${this.marginTopPx - i * this.contentPx}px`,
+        height: `${this.contentPx * this.pages}px`,
+        top: `${-i * this.contentPx}px`,
       });
 
       this.band(sheet, "header", theme, title, vars, margin, i + 1);
