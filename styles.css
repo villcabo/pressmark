@@ -56,44 +56,60 @@
   --pm-scale: 1;
 }
 
+/* One sheet per page, with a gap between: the way a PDF viewer shows them,
+   instead of one long scroll with a line drawn across it. */
+.pressmark-sheet {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 22%);
+  margin-bottom: calc(18px / var(--pm-scale, 1));
+}
+
+.pressmark-sheet:last-child { margin-bottom: 0; }
+
+/* The same document in every sheet, shifted so each shows its own page. */
 .pressmark-preview {
+  position: absolute;
+  left: 0;
   display: block;
   border: 0;
-  background: #fff;
-  width: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Header and footer are drawn per sheet: in the PDF printToPDF puts them
+   there, outside the document, so nothing in the page would show them. */
+.pressmark-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.pressmark-band.is-header { top: 8px; }
+.pressmark-band.is-footer { bottom: 8px; }
+
+/* Measures the document height off-screen so the page count is known before
+   any sheet is built. */
+.pressmark-probe {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  height: 400px;
+  border: 0;
+  visibility: hidden;
+}
+
+.pressmark-more {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: calc(12px / var(--pm-scale, 1));
+  padding: calc(10px / var(--pm-scale, 1)) 0;
 }
 
 /* Donde Chromium va a cortar. Aproximado, pero suficiente para ver si un
    titulo o una tabla quedan a caballo entre dos carillas. */
-.pressmark-breaks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.pressmark-break {
-  position: absolute;
-  left: 0;
-  right: 0;
-  /* Contra-escalado: el contenedor esta a scale(--pm-scale) y sin esto la
-     linea se afinaria hasta desaparecer. */
-  border-top: calc(1.5px / var(--pm-scale)) dashed rgb(220 38 38 / 60%);
-}
-
-.pressmark-break span {
-  position: absolute;
-  right: calc(8px / var(--pm-scale));
-  top: calc(5px / var(--pm-scale));
-  padding: calc(2px / var(--pm-scale)) calc(7px / var(--pm-scale));
-  border-radius: calc(3px / var(--pm-scale));
-  background: rgb(220 38 38 / 85%);
-  color: #fff;
-  font-family: var(--font-interface);
-  font-size: calc(11px / var(--pm-scale));
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .pressmark-info {
   margin-top: 0.6em;
   color: var(--text-muted);

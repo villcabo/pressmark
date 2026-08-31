@@ -1,53 +1,63 @@
 /**
  * The live document preview.
  *
- * Extracted from the export modal so the settings tab and the theme designer
- * show the SAME thing: three copies of a renderer would drift, and a preview
- * that does not match the export is worse than no preview.
+ * Shared by the export modal and the theme designer: three copies of a
+ * renderer would drift, and a preview that stops matching the export is worse
+ * than no preview at all.
  *
- * The page is drawn at TRUE paper width and then scaled down. Rendering into a
- * narrower box instead would re-lay-out the document — different column width,
- * different line breaks — and the preview would stop predicting the PDF.
+ * Two things it takes seriously:
+ *
+ * **Real paper width.** The page is drawn at true paper size and then scaled.
+ * Rendering into a narrower box would re-lay-out the document — different
+ * column width, different line breaks — and the preview would stop predicting
+ * the PDF.
+ *
+ * **Real sheets.** Each page is its own sheet with a gap between, the way a PDF
+ * viewer shows them, rather than one long scroll with a line drawn across it.
+ * The header and footer are drawn on every sheet, because in the PDF they are
+ * put there by printToPDF and would otherwise never appear in the preview.
  */
-import { documentHTML } from "./document";
+import { bandHTML, documentHTML, mergeVars } from "./document";
 import { paperSize } from "./paper";
 import type { Resolved } from "./theme";
-import { t } from "./i18n";
+import { t, language } from "./i18n";
 
 /** CSS pixels per inch: the unit Chromium lays out in. */
 const PX_PER_INCH = 96;
 
+/**
+ * Sheets rendered at most.
+ *
+ * Each one parses the document again, so a hundred-page note would cost a
+ * hundred layouts. Nobody judges a format past the first few pages.
+ */
+const MAX_SHEETS = 12;
+
 export interface PreviewParts {
-  /** Scrolls and clips; the page lives inside at scale. */
   canvas: HTMLElement;
-  /** Caption under the canvas: paper, margins, page count. */
   info: HTMLElement;
 }
 
 export class Preview {
-  private frame: HTMLIFrameElement;
-  private stage: HTMLElement;
-  private scaler: HTMLElement;
-  private breaks: HTMLElement;
   private canvas: HTMLElement;
+  private stage: HTMLElement;
   private info: HTMLElement;
+  private probe: HTMLIFrameElement;
   private pages = 1;
-  /** "fit", or an explicit factor such as 0.75. */
   private zoom: "fit" | number = "fit";
   private lastWidthPx = 0;
-  private lastOpts: { maxHeight?: number; fill?: boolean } = {};
 
   constructor(parent: HTMLElement) {
     this.canvas = parent.createDiv({ cls: "pressmark-canvas" });
-    // A stage sized to the SCALED page. transform does not change layout size,
-    // so without this the page cannot be centred and leaves dead space beside
-    // it. The stage occupies the space the page visually takes.
+    // Sized to the SCALED pages: transform does not change layout size, so this
+    // is what gives them something to be centred as.
     this.stage = this.canvas.createDiv({ cls: "pressmark-stage" });
-    this.scaler = this.stage.createDiv({ cls: "pressmark-scale" });
-    this.frame = this.scaler.createEl("iframe", { cls: "pressmark-preview" });
-    this.frame.setAttr("sandbox", "allow-same-origin");
-    this.breaks = this.scaler.createDiv({ cls: "pressmark-breaks" });
     this.info = parent.createDiv({ cls: "pressmark-info" });
+
+    // Measures the document's height off-screen so the page count is known
+    // before any sheet is built.
+    this.probe = parent.createEl("iframe", { cls: "pressmark-probe" });
+    this.probe.setAttr("sandbox", "allow-same-origin");
   }
 
   get parts(): PreviewParts {
@@ -55,74 +65,10 @@ export class Preview {
   }
 
   /**
-   * Redraws with a theme and an already-rendered document body.
-   *
-   * `fill` lets the canvas take whatever vertical space CSS gives it, instead
-   * of a fixed cap. The modal wants the cap — it is one panel among several.
-   * The designer wants the space — the page IS the point there.
-   */
-  render(
-    theme: Resolved,
-    title: string,
-    bodyHTML: string,
-    opts: { maxHeight?: number; fill?: boolean } = {},
-  ): void {
-    let w = 8.27;
-    let h = 11.69;
-    try {
-      [w, h] = paperSize(theme.page);
-    } catch {
-      /* reported in the caption below */
-    }
-    if (theme.page?.orientation === "landscape") [w, h] = [h, w];
-
-    const widthPx = w * PX_PER_INCH;
-    const heightPx = h * PX_PER_INCH;
-
-    this.frame.style.width = `${widthPx}px`;
-    this.frame.srcdoc = documentHTML(title, bodyHTML, theme, true);
-
-    this.frame.onload = () => {
-      const doc = this.frame.contentDocument;
-      if (!doc) return;
-
-      // Rounded up to whole pages so the last one is shown complete rather
-      // than sliced mid-paragraph.
-      const content = Math.max(doc.body.scrollHeight, heightPx);
-      this.pages = Math.max(1, Math.ceil(content / heightPx));
-      const total = this.pages * heightPx;
-
-      this.frame.style.height = `${total}px`;
-      this.scaler.style.width = `${widthPx}px`;
-      this.scaler.style.height = `${total}px`;
-
-      this.drawBreaks(heightPx);
-      this.fit(widthPx, opts);
-      this.caption(theme);
-    };
-  }
-
-  /**
-   * Marks where Chromium will break the page.
-   *
-   * Approximate: the real break respects `page-break-inside`, so a block can be
-   * pushed to the next page. Close enough to see a heading or a table stranded
-   * across two sheets, which is what this is for.
-   */
-  private drawBreaks(pageHeightPx: number): void {
-    this.breaks.empty();
-    for (let i = 1; i < this.pages; i++) {
-      const line = this.breaks.createDiv({ cls: "pressmark-break" });
-      line.style.top = `${i * pageHeightPx}px`;
-      line.createSpan({ text: t("modal.page", { n: i + 1 }) });
-    }
-  }
-
-  /**
    * Alt + wheel zooms, the way every design tool does.
    *
    * Alt rather than Ctrl: Ctrl+wheel is the browser's own page zoom, and
-   * fighting it would break the rest of the app inside the same window.
+   * fighting it would break the rest of the app in the same window.
    */
   enableWheelZoom(onChange?: (factor: number) => void): void {
     this.canvas.addEventListener(
@@ -130,8 +76,7 @@ export class Preview {
       (e) => {
         if (!e.altKey) return;
         e.preventDefault();
-        const current = this.currentFactor(this.lastWidthPx);
-        const next = Math.max(0.1, Math.min(3, current * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+        const next = clamp(this.factor() * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
         this.setZoom(next);
         onChange?.(next);
       },
@@ -139,58 +84,130 @@ export class Preview {
     );
   }
 
-  /** Sets the zoom and redraws at the new factor. */
   setZoom(zoom: "fit" | number): void {
     this.zoom = zoom;
-    if (this.lastWidthPx) this.fit(this.lastWidthPx, this.lastOpts);
+    this.applyScale();
   }
 
-  /** The factor currently applied, for a caller that wants to label it. */
-  get scale(): number {
-    return this.currentFactor(this.lastWidthPx);
+  render(theme: Resolved, title: string, bodyHTML: string, opts: { fill?: boolean } = {}): void {
+    let w = 8.27;
+    let h = 11.69;
+    try {
+      [w, h] = paperSize(theme.page);
+    } catch {
+      /* surfaced in the caption */
+    }
+    if (theme.page?.orientation === "landscape") [w, h] = [h, w];
+
+    const widthPx = w * PX_PER_INCH;
+    const heightPx = h * PX_PER_INCH;
+    this.lastWidthPx = widthPx;
+    this.canvas.toggleClass("is-filling", opts.fill === true);
+
+    const html = documentHTML(title, bodyHTML, theme, true);
+
+    this.probe.setCssProps({ width: `${widthPx}px` });
+    this.probe.srcdoc = html;
+    this.probe.onload = () => {
+      const doc = this.probe.contentDocument;
+      const content = Math.max(doc?.body.scrollHeight ?? heightPx, heightPx);
+      this.pages = Math.max(1, Math.ceil(content / heightPx));
+      this.buildSheets(theme, title, html, widthPx, heightPx);
+      this.applyScale();
+      this.caption(theme);
+    };
   }
 
-  private currentFactor(widthPx: number): number {
+  /** One sheet per page, each showing its slice of the same document. */
+  private buildSheets(
+    theme: Resolved,
+    title: string,
+    html: string,
+    widthPx: number,
+    heightPx: number,
+  ): void {
+    this.stage.empty();
+    const shown = Math.min(this.pages, MAX_SHEETS);
+    const vars = mergeVars(theme.vars, null, language());
+    const margin = theme.page?.margin;
+
+    for (let i = 0; i < shown; i++) {
+      const sheet = this.stage.createDiv({ cls: "pressmark-sheet" });
+      sheet.setCssProps({ width: `${widthPx}px`, height: `${heightPx}px` });
+
+      const frame = sheet.createEl("iframe", { cls: "pressmark-preview" });
+      frame.setAttr("sandbox", "allow-same-origin");
+      frame.srcdoc = html;
+      // The same document in every sheet, shifted so each shows its own page.
+      frame.setCssProps({
+        width: `${widthPx}px`,
+        height: `${heightPx * this.pages}px`,
+        top: `${-i * heightPx}px`,
+      });
+
+      this.band(sheet, "header", theme, title, vars, margin, i + 1);
+      this.band(sheet, "footer", theme, title, vars, margin, i + 1);
+    }
+
+    if (this.pages > shown) {
+      this.stage.createDiv({
+        cls: "pressmark-more",
+        text: t("preview.morePages", { n: this.pages - shown }),
+      });
+    }
+  }
+
+  /**
+   * Draws a header or footer onto a sheet.
+   *
+   * In the PDF these are put there by printToPDF, outside the document, which
+   * is why they never showed up in the preview. Here the page placeholders are
+   * filled with real numbers rather than the spans Chrome fills in itself.
+   */
+  private band(
+    sheet: HTMLElement,
+    which: "header" | "footer",
+    theme: Resolved,
+    title: string,
+    vars: Record<string, string>,
+    margin: Resolved["page"] extends undefined ? never : NonNullable<Resolved["page"]>["margin"],
+    page: number,
+  ): void {
+    const band = which === "header" ? theme.header : theme.footer;
+    if (!band?.enabled) return;
+
+    const html = bandHTML(band, margin, vars, title, language())
+      .replace(/<span class="pageNumber"><\/span>/g, String(page))
+      .replace(/<span class="totalPages"><\/span>/g, String(this.pages))
+      .replace(/<span class="date"><\/span>/g, new Date().toLocaleDateString())
+      .replace(/<span class="url"><\/span>/g, "");
+
+    // Parsed rather than assigned to innerHTML. bandHTML() escapes the values
+    // it interpolates, but "it is safe because I wrote it" is exactly the
+    // assumption the rule exists to stop, and parsing says so explicitly.
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const el = sheet.createDiv({ cls: `pressmark-band is-${which}` });
+    for (const node of Array.from(parsed.body.childNodes)) {
+      el.appendChild(document.importNode(node, true));
+    }
+  }
+
+  private factor(): number {
     if (this.zoom !== "fit") return this.zoom;
     const available = this.canvas.clientWidth;
-    if (!available || !widthPx) return 1;
-    // Fills the pane, enlarging past 100% when there is room: a page shown
-    // smaller than it needs to be is the thing "fit" is supposed to fix.
-    // Capped so a very wide pane does not blow the page up past legibility.
-    return Math.max(0.1, Math.min(3, (available - 24) / widthPx));
+    if (!available || !this.lastWidthPx) return 1;
+    // Room for the scrollbar, so fitting does not itself cause one.
+    return clamp((available - 28) / this.lastWidthPx);
   }
 
-  /** Scales the page and centres it. */
-  private fit(widthPx: number, opts: { maxHeight?: number; fill?: boolean }): void {
-    this.lastWidthPx = widthPx;
-    this.lastOpts = opts;
-    const available = this.canvas.clientWidth;
-    if (!available) return;
-    const f = this.currentFactor(widthPx);
-
-    // The break labels live inside the scaled element and would shrink with it;
-    // the variable counter-scales them back to a readable size.
-    this.canvas.setCssProps({ "--pm-scale": String(f) });
-    this.scaler.setCssProps({
-      transform: `scale(${f})`,
-      "--pm-scale": String(f),
-    });
-
-    // The stage takes the page's visual size so it can be centred.
+  private applyScale(): void {
+    if (!this.lastWidthPx) return;
+    const f = this.factor();
+    this.stage.setCssProps({ transform: `scale(${f})`, "--pm-scale": String(f) });
+    // The stage carries the pages' visual size so they can be centred.
     this.stage.setCssProps({
-      width: `${widthPx * f}px`,
-      height: `${this.scaler.offsetHeight * f}px`,
-    });
-
-    if (opts.fill) {
-      // CSS owns the height: the canvas takes the space it is given and the
-      // pages scroll inside it.
-      this.canvas.addClass("is-filling");
-      return;
-    }
-    this.canvas.removeClass("is-filling");
-    this.canvas.setCssProps({
-      height: `${Math.min(opts.maxHeight ?? 520, this.scaler.offsetHeight * f)}px`,
+      width: `${this.lastWidthPx * f}px`,
+      height: `${this.stage.scrollHeight * f}px`,
     });
   }
 
@@ -210,4 +227,8 @@ export class Preview {
       ].join(" · "),
     );
   }
+}
+
+function clamp(f: number): number {
+  return Math.max(0.1, Math.min(3, f));
 }
