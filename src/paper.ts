@@ -94,14 +94,3 @@ export function printOptionsFor(t: Resolved, header: string, footer: string): Pr
   };
 }
 
-/**
- * Copies the REAL bytes of the result.
- *
- * printToPDF returns a Node Buffer, and `buffer.buffer` doesn't return its
- * own bytes: it returns the entire pool it was carved from, which is usually
- * much bigger. Writing that out produces a corrupt PDF. Has to be sliced by
- * byteOffset/byteLength.
- */
-export function bytesOf(b: Uint8Array): ArrayBuffer {
-  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
-}

@@ -19,7 +19,6 @@ export interface ExportOptions {
   orientation: "" | "portrait" | "landscape";
   margin: string; // mm; "" = the theme's own
   cover: boolean | null; // null = the theme's own
-  folder: string;
   open: boolean;
 }
 
@@ -172,15 +171,6 @@ export class ExportModal extends Modal {
         });
       });
 
-    new Setting(c)
-      .setName(t("modal.outputFolder"))
-      .setDesc(t("modal.outputFolderDesc"))
-      .addText((c) =>
-        c
-          .setPlaceholder(t("modal.outputFolderPlaceholder"))
-          .setValue(this.o.folder)
-          .onChange((v) => (this.o.folder = v.trim())),
-      );
 
     new Setting(c)
       .setName(t("modal.openWhenDone"))

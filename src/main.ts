@@ -11,6 +11,7 @@ import {
   Notice,
   Plugin,
   TFile,
+  FileSystemAdapter,
   normalizePath,
 } from "obsidian";
 import { load, type Resolved, type ThemeFS } from "./theme";
@@ -23,7 +24,7 @@ import {
   splitFrontmatter,
   titleFor,
 } from "./render";
-import { bytesOf, generate, printOptionsFor } from "./pdf";
+import { askWhereToSave, generate, printOptionsFor, writePdf } from "./pdf";
 import { applyOptions, ExportModal, type ExportOptions } from "./export-modal";
 import { SettingsTab } from "./settings";
 import { DEFAULT_SETTINGS, type Settings } from "./config";
@@ -174,7 +175,6 @@ export default class PressmarkPlugin extends Plugin {
       orientation: "",
       margin: "",
       cover: null,
-      folder: this.settings.outputFolder,
       open: this.settings.openWhenDone,
     };
   }
@@ -209,7 +209,6 @@ export default class PressmarkPlugin extends Plugin {
           // Whatever gets chosen becomes the next default: nobody wants to
           // re-pick the format on every export.
           this.settings.theme = o.theme;
-          this.settings.outputFolder = o.folder;
           this.settings.openWhenDone = o.open;
           void this.saveSettings();
           void this.export(file, o, bodyHTML, title);
@@ -258,14 +257,29 @@ export default class PressmarkPlugin extends Plugin {
         bandHTML(theme.footer, m, vars, title, language()),
       );
 
+      // Asked before rendering would leave the user staring at a dialog with
+      // nothing behind it; asked after, the document is ready the moment they
+      // pick a name.
+      const destination = await askWhereToSave(title, this.startDirectory(file));
+      if (destination === null) {
+        notice.hide();
+        return; // cancelled: no file, no notice, nothing half-written
+      }
+
       const pdf = await generate(html, opts, this.app.vault);
-      const destination = this.outputPath(file, o.folder);
-      await this.app.vault.adapter.writeBinary(destination, bytesOf(pdf));
+      // The Uint8Array goes straight in: fs.writeFile honours byteOffset and
+      // byteLength, so a Node Buffer that is a view into a larger shared pool
+      // still writes only its own bytes. It is `.buffer` that would hand over
+      // the whole pool — the bug that used to need bytesOf() to work around.
+      await writePdf(destination, pdf);
+
+      this.settings.lastDirectory = destination.slice(0, destination.lastIndexOf("/"));
+      void this.saveSettings();
 
       notice.hide();
       new Notice(`✓ ${destination}`);
       if (o.open) {
-        void this.app.workspace.openLinkText(destination, "", false);
+        void this.openExported(destination);
       }
     } catch (e) {
       notice.hide();
@@ -276,10 +290,33 @@ export default class PressmarkPlugin extends Plugin {
     }
   }
 
-  private outputPath(file: TFile, chosenFolder: string): string {
-    const name = `${file.basename}.pdf`;
-    const folder = chosenFolder || file.parent?.path || "";
-    return normalizePath(folder ? `${folder}/${name}` : name);
+  /**
+   * Where the save dialog opens.
+   *
+   * The last place the user saved to, falling back to the note's own folder
+   * inside the vault: both are better guesses than the home directory.
+   */
+  private startDirectory(file: TFile): string {
+    if (this.settings.lastDirectory) return this.settings.lastDirectory;
+    const adapter = this.app.vault.adapter;
+    if (adapter instanceof FileSystemAdapter) {
+      const parent = file.parent?.path ?? "";
+      return adapter.getFullPath(normalizePath(parent));
+    }
+    return "";
+  }
+
+  /** Hands the file to the system, since it may well be outside the vault. */
+  private async openExported(path: string): Promise<void> {
+    try {
+      const electron = (activeWindow as unknown as { require?: (m: string) => unknown }).require;
+      const shell = (electron?.("electron") as { shell?: { openPath(p: string): Promise<string> } })
+        ?.shell;
+      if (shell) await shell.openPath(path);
+    } catch {
+      // Opening is a convenience; failing to do it must not look like the
+      // export itself failed.
+    }
   }
 }
 

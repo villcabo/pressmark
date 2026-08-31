@@ -48,7 +48,17 @@ CLI is how you use it everywhere else.
 ## Usage
 
 Open a note and click the ribbon icon, or run **Pressmark: Export to PDF** from
-the command palette. Pick a format, check the preview, export.
+the command palette. Pick a format, check the preview, export — then choose
+where the PDF goes in the system save dialog.
+
+### About filesystem access
+
+Pressmark writes the PDF to the location you pick in that dialog, which is
+usually outside your vault. Obsidian's Vault API cannot write outside the
+vault, so this is the one place the plugin touches the filesystem directly.
+
+It writes exactly one file: the PDF, to the path you just chose. Nothing is
+read from outside the vault, and nothing is written anywhere you did not name.
 
 ## Theme packs
 

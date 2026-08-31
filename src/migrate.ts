@@ -56,8 +56,14 @@ function renameKeys<V>(
  * current passes through untouched.
  */
 export function migrateSettings(s: Settings): Settings {
+  // `outputFolder` was a vault-relative path chosen once in settings. The save
+  // dialog replaced it, and `lastDirectory` is an absolute path, so the old
+  // value cannot be carried over — it is dropped rather than half-converted
+  // into something that would point somewhere wrong.
+  const { outputFolder: _dropped, ...rest } = s as Settings & { outputFolder?: string };
+
   const out: Settings = {
-    ...s,
+    ...rest,
     theme: THEMES[s.theme] ?? s.theme,
     overrides: {},
     overridesVars: {},

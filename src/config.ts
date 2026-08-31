@@ -18,7 +18,12 @@ export interface Settings {
    */
   overridesVars: Record<string, Record<string, string>>;
   openWhenDone: boolean;
-  outputFolder: string;
+  /**
+   * Where the last export landed. Remembered so a second export starts in the
+   * same place, and NOT exposed as a setting: the save dialog is the place to
+   * decide that, once per document.
+   */
+  lastDirectory: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -26,5 +31,5 @@ export const DEFAULT_SETTINGS: Settings = {
   overrides: {},
   overridesVars: {},
   openWhenDone: true,
-  outputFolder: "",
+  lastDirectory: "",
 };
