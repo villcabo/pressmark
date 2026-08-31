@@ -50,8 +50,9 @@
   margin: 0 auto;
 }
 
-.pressmark-scale {
-  position: relative;
+/* Carries the transform. The stage outside it carries the scaled size for
+   centring: doing both on one element scales it twice. */
+.pressmark-sheets {
   transform-origin: top left;
   --pm-scale: 1;
 }

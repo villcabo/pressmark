@@ -18,7 +18,7 @@
  * put there by printToPDF and would otherwise never appear in the preview.
  */
 import { bandHTML, documentHTML, mergeVars } from "./document";
-import { paperSize } from "./paper";
+import { paperSize, toInches } from "./paper";
 import type { Resolved } from "./theme";
 import { t, language } from "./i18n";
 
@@ -41,17 +41,24 @@ export interface PreviewParts {
 export class Preview {
   private canvas: HTMLElement;
   private stage: HTMLElement;
+  private sheets: HTMLElement;
   private info: HTMLElement;
   private probe: HTMLIFrameElement;
   private pages = 1;
   private zoom: "fit" | number = "fit";
   private lastWidthPx = 0;
+  private contentPx = 1;
+  private marginTopPx = 0;
 
   constructor(parent: HTMLElement) {
     this.canvas = parent.createDiv({ cls: "pressmark-canvas" });
     // Sized to the SCALED pages: transform does not change layout size, so this
     // is what gives them something to be centred as.
     this.stage = this.canvas.createDiv({ cls: "pressmark-stage" });
+    // Two elements on purpose: the stage carries the SCALED size so it can be
+    // centred, and the inner one carries the transform. Doing both on one
+    // element scales it twice and the page vanishes.
+    this.sheets = this.stage.createDiv({ cls: "pressmark-sheets" });
     this.info = parent.createDiv({ cls: "pressmark-info" });
 
     // Measures the document's height off-screen so the page count is known
@@ -106,12 +113,20 @@ export class Preview {
 
     const html = documentHTML(title, bodyHTML, theme, true);
 
+    // What actually fits on a page: the sheet minus the margins the PDF puts
+    // on EVERY page. Slicing at the full page height is what let text run
+    // through where the margins belong and the footer land on top of it.
+    const mt = inchesOf(theme.page?.margin?.top) * PX_PER_INCH;
+    const mb = inchesOf(theme.page?.margin?.bottom) * PX_PER_INCH;
+    this.contentPx = Math.max(120, heightPx - mt - mb);
+    this.marginTopPx = mt;
+
     this.probe.setCssProps({ width: `${widthPx}px` });
     this.probe.srcdoc = html;
     this.probe.onload = () => {
       const doc = this.probe.contentDocument;
-      const content = Math.max(doc?.body.scrollHeight ?? heightPx, heightPx);
-      this.pages = Math.max(1, Math.ceil(content / heightPx));
+      const content = Math.max(doc?.body.scrollHeight ?? 0, 1);
+      this.pages = Math.max(1, Math.ceil(content / this.contentPx));
       this.buildSheets(theme, title, html, widthPx, heightPx);
       this.applyScale();
       this.caption(theme);
@@ -126,13 +141,13 @@ export class Preview {
     widthPx: number,
     heightPx: number,
   ): void {
-    this.stage.empty();
+    this.sheets.empty();
     const shown = Math.min(this.pages, MAX_SHEETS);
     const vars = mergeVars(theme.vars, null, language());
     const margin = theme.page?.margin;
 
     for (let i = 0; i < shown; i++) {
-      const sheet = this.stage.createDiv({ cls: "pressmark-sheet" });
+      const sheet = this.sheets.createDiv({ cls: "pressmark-sheet" });
       sheet.setCssProps({ width: `${widthPx}px`, height: `${heightPx}px` });
 
       const frame = sheet.createEl("iframe", { cls: "pressmark-preview" });
@@ -141,8 +156,10 @@ export class Preview {
       // The same document in every sheet, shifted so each shows its own page.
       frame.setCssProps({
         width: `${widthPx}px`,
-        height: `${heightPx * this.pages}px`,
-        top: `${-i * heightPx}px`,
+        height: `${this.contentPx * this.pages + this.marginTopPx}px`,
+        // Page i starts at its own top margin, and each page shows one content
+        // height's worth: the same arithmetic the print engine does.
+        top: `${this.marginTopPx - i * this.contentPx}px`,
       });
 
       this.band(sheet, "header", theme, title, vars, margin, i + 1);
@@ -150,7 +167,7 @@ export class Preview {
     }
 
     if (this.pages > shown) {
-      this.stage.createDiv({
+      this.sheets.createDiv({
         cls: "pressmark-more",
         text: t("preview.morePages", { n: this.pages - shown }),
       });
@@ -203,11 +220,11 @@ export class Preview {
   private applyScale(): void {
     if (!this.lastWidthPx) return;
     const f = this.factor();
-    this.stage.setCssProps({ transform: `scale(${f})`, "--pm-scale": String(f) });
-    // The stage carries the pages' visual size so they can be centred.
+    this.sheets.setCssProps({ transform: `scale(${f})`, "--pm-scale": String(f) });
     this.stage.setCssProps({
       width: `${this.lastWidthPx * f}px`,
-      height: `${this.stage.scrollHeight * f}px`,
+      height: `${this.sheets.scrollHeight * f}px`,
+      "--pm-scale": String(f),
     });
   }
 
@@ -231,4 +248,13 @@ export class Preview {
 
 function clamp(f: number): number {
   return Math.max(0.1, Math.min(3, f));
+}
+
+/** A margin as inches, tolerating a missing or malformed value. */
+function inchesOf(v: string | undefined): number {
+  try {
+    return toInches(v);
+  } catch {
+    return 0;
+  }
 }
