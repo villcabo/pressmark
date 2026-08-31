@@ -116,12 +116,18 @@ function replaceUndrawnDiagrams(root: HTMLElement): void {
   for (const el of Array.from(root.querySelectorAll(".mermaid"))) {
     if (el.querySelector("svg")) continue;
 
-    // The source survives on the element in Obsidian's own attribute; when it
-    // does not, the element's text is the next best thing.
     const source = el.getAttribute("data-mermaid-source") ?? el.textContent ?? "";
+
+    // Replace the whole top-level block, not just the .mermaid element. The
+    // permission prompt Obsidian renders sits OUTSIDE it, as a sibling in the
+    // same block, so replacing the element alone leaves the prompt behind —
+    // which is how it kept reaching the page.
+    let block: Element = el;
+    while (block.parentElement && block.parentElement !== root) block = block.parentElement;
+
     const pre = createEl("pre", { cls: "pressmark-undrawn" });
     pre.createEl("code", { text: source.trim() });
-    el.replaceWith(pre);
+    block.replaceWith(pre);
   }
 }
 

@@ -35,6 +35,8 @@ export class DesignerView extends ItemView {
   private bodyHTML = "";
   private title = "";
   private maximized = false;
+  private zoomSel!: HTMLSelectElement;
+  private maxBtn!: HTMLButtonElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -66,41 +68,58 @@ export class DesignerView extends ItemView {
     const right = cols.createDiv({ cls: "pressmark-designer-preview" });
     this.buildPreviewHeader(right);
     this.preview = new Preview(right);
+    // Alt + wheel keeps the dropdown honest about the factor in use.
+    this.preview.enableWheelZoom((f) => {
+      this.zoomSel.value = String(
+        ["0.5", "0.75", "1", "1.5", "2"].find((z) => Math.abs(Number(z) - f) < 0.01) ?? "",
+      );
+    });
 
     await this.reload();
   }
 
   private buildPreviewHeader(parent: HTMLElement): void {
-    const bar = parent.createDiv({ cls: "pressmark-designer-bar" });
+    const bar = parent.createDiv({ cls: "pressmark-bar" });
 
-    new Setting(bar).setName(t("designer.document")).addDropdown((d) => {
-      for (const id of sampleIds()) d.addOption(id, t(`sample.${id}` as never));
-      d.addOption("__active", t("designer.activeNote"));
-      d.setValue(this.source).onChange((v) => {
-        this.source = v;
-        void this.reload();
-      });
+    // Built by hand rather than with Setting: a Setting stretches to the full
+    // width, which is what left a desert between each label and its control.
+    const field = (labelText: string): HTMLElement => {
+      const wrap = bar.createDiv({ cls: "pressmark-field" });
+      wrap.createSpan({ cls: "pressmark-field-label", text: labelText });
+      return wrap;
+    };
+
+    const docSel = field(t("designer.document")).createEl("select", { cls: "dropdown" });
+    for (const id of sampleIds()) {
+      docSel.createEl("option", { value: id, text: t(`sample.${id}` as never) });
+    }
+    docSel.createEl("option", { value: "__active", text: t("designer.activeNote") });
+    docSel.value = this.source;
+    docSel.addEventListener("change", () => {
+      this.source = docSel.value;
+      void this.reload();
     });
 
-    new Setting(bar).setName(t("designer.zoom")).addDropdown((d) => {
-      d.addOption("fit", t("designer.zoomFit"));
-      for (const z of ["0.5", "0.75", "1", "1.5"]) d.addOption(z, `${Number(z) * 100}%`);
-      d.setValue("fit").onChange((v) => {
-        this.preview.setZoom(v === "fit" ? "fit" : Number(v));
-      });
+    this.zoomSel = field(t("designer.zoom")).createEl("select", { cls: "dropdown" });
+    this.zoomSel.createEl("option", { value: "fit", text: t("designer.zoomFit") });
+    for (const z of ["0.5", "0.75", "1", "1.5", "2"]) {
+      this.zoomSel.createEl("option", { value: z, text: `${Math.round(Number(z) * 100)}%` });
+    }
+    this.zoomSel.addEventListener("change", () => {
+      const v = this.zoomSel.value;
+      this.preview.setZoom(v === "fit" ? "fit" : Number(v));
     });
 
-    // Deliberately prominent: the side-by-side pane is fine for nudging a
-    // colour and useless for judging a page.
-    const max = bar.createEl("button", { cls: "pressmark-maximize mod-cta" });
-    max.createSpan({ text: t("designer.maximize") });
-    max.addEventListener("click", () => {
+    bar.createDiv({ cls: "pressmark-bar-spacer" });
+    bar.createSpan({ cls: "pressmark-hint", text: t("designer.zoomHint") });
+
+    // Deliberately prominent: the docked pane is fine for nudging a colour and
+    // useless for judging a page.
+    this.maxBtn = bar.createEl("button", { cls: "mod-cta", text: t("designer.maximize") });
+    this.maxBtn.addEventListener("click", () => {
       this.maximized = !this.maximized;
       this.contentEl.toggleClass("is-maximized", this.maximized);
-      max.empty();
-      max.createSpan({
-        text: this.maximized ? t("designer.restore") : t("designer.maximize"),
-      });
+      this.maxBtn.setText(this.maximized ? t("designer.restore") : t("designer.maximize"));
       // The grid has to reflow before the canvas reports its new width, or the
       // page would be rescaled against the old one.
       window.requestAnimationFrame(() => this.redraw());

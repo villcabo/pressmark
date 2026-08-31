@@ -162,28 +162,43 @@
   padding-top: 1.4em;
 }
 
+/* A compact toolbar: each label sits against its own control instead of being
+   pushed to the far side of a full-width row. */
+.pressmark-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.1em;
+  margin-bottom: 0.9em;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.pressmark-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.pressmark-field-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.pressmark-bar-spacer { flex: 1 1 auto; }
+
+.pressmark-hint {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
 .pressmark-designer-preview {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.pressmark-designer-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1em;
-  margin-bottom: 0.8em;
-  flex: 0 0 auto;
-}
-
-.pressmark-designer-bar .setting-item {
-  border: none;
-  padding: 0;
-  flex: 1;
-}
-
-.pressmark-maximize { white-space: nowrap; }
 
 /* The canvas takes whatever vertical space is left, and the pages scroll
    inside it. A fixed height leaves a desert under a one-page cover. */

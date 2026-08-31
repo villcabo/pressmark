@@ -118,6 +118,27 @@ export class Preview {
     }
   }
 
+  /**
+   * Alt + wheel zooms, the way every design tool does.
+   *
+   * Alt rather than Ctrl: Ctrl+wheel is the browser's own page zoom, and
+   * fighting it would break the rest of the app inside the same window.
+   */
+  enableWheelZoom(onChange?: (factor: number) => void): void {
+    this.canvas.addEventListener(
+      "wheel",
+      (e) => {
+        if (!e.altKey) return;
+        e.preventDefault();
+        const current = this.currentFactor(this.lastWidthPx);
+        const next = Math.max(0.1, Math.min(3, current * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+        this.setZoom(next);
+        onChange?.(next);
+      },
+      { passive: false },
+    );
+  }
+
   /** Sets the zoom and redraws at the new factor. */
   setZoom(zoom: "fit" | number): void {
     this.zoom = zoom;
@@ -133,8 +154,10 @@ export class Preview {
     if (this.zoom !== "fit") return this.zoom;
     const available = this.canvas.clientWidth;
     if (!available || !widthPx) return 1;
-    // Room for the scrollbar, so fitting does not itself cause one.
-    return Math.min(1, (available - 24) / widthPx);
+    // Fills the pane, enlarging past 100% when there is room: a page shown
+    // smaller than it needs to be is the thing "fit" is supposed to fix.
+    // Capped so a very wide pane does not blow the page up past legibility.
+    return Math.max(0.1, Math.min(3, (available - 24) / widthPx));
   }
 
   /** Scales the page and centres it. */
