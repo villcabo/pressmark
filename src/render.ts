@@ -113,22 +113,35 @@ async function waitForDiagrams(root: HTMLElement, timeoutMs = 4000): Promise<voi
  * meant to be, and the author sees that something needs enabling.
  */
 function replaceUndrawnDiagrams(root: HTMLElement): void {
+  // A guarded diagram is a whole subtree, not the .mermaid element: Obsidian
+  // wraps it in `.mermaid-wrapper.is-guarded` holding the prompt in
+  // `.mermaid-guard-text` and the diagram in `.mermaid-guard-source`. Aiming
+  // at `.mermaid` replaced the wrong node and left the prompt on the page —
+  // and in the PDF. These names come from Obsidian's own bundle, not a guess.
+  for (const wrapper of Array.from(root.querySelectorAll(".mermaid-wrapper.is-guarded"))) {
+    const source = wrapper.querySelector(".mermaid-guard-source")?.textContent ?? "";
+    wrapper.replaceWith(undrawn(source));
+  }
+
+  // Anything else that never got an <svg>: a diagram that failed to draw, or a
+  // render that timed out.
   for (const el of Array.from(root.querySelectorAll(".mermaid"))) {
     if (el.querySelector("svg")) continue;
-
-    const source = el.getAttribute("data-mermaid-source") ?? el.textContent ?? "";
-
-    // Replace the whole top-level block, not just the .mermaid element. The
-    // permission prompt Obsidian renders sits OUTSIDE it, as a sibling in the
-    // same block, so replacing the element alone leaves the prompt behind —
-    // which is how it kept reaching the page.
-    let block: Element = el;
-    while (block.parentElement && block.parentElement !== root) block = block.parentElement;
-
-    const pre = createEl("pre", { cls: "pressmark-undrawn" });
-    pre.createEl("code", { text: source.trim() });
-    block.replaceWith(pre);
+    el.replaceWith(undrawn(el.textContent ?? ""));
   }
+}
+
+/**
+ * The fallback for a diagram that never drew: its own source.
+ *
+ * The reader sees what the diagram was meant to be, and the author sees that
+ * something needs enabling. Both beat a stray permission prompt, and both beat
+ * a silent gap.
+ */
+function undrawn(source: string): HTMLElement {
+  const pre = createEl("pre", { cls: "pressmark-undrawn" });
+  pre.createEl("code", { text: source.trim() });
+  return pre;
 }
 
 export async function renderBody(

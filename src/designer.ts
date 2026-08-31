@@ -20,6 +20,8 @@ import { t, language } from "./i18n";
 
 export const DESIGNER_VIEW = "pressmark-designer";
 
+const ZOOM_PRESETS = ["0.5", "0.75", "1", "1.5", "2"];
+
 const GROUP_ORDER = ["footer", "palette", "typography", "cover", "other"];
 
 /** The bundled samples, in the order they are declared. */
@@ -35,6 +37,7 @@ export class DesignerView extends ItemView {
   private bodyHTML = "";
   private title = "";
   private zoomSel!: HTMLSelectElement;
+  private customOpt?: HTMLOptionElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -66,12 +69,10 @@ export class DesignerView extends ItemView {
     const right = cols.createDiv({ cls: "pressmark-designer-preview" });
     this.buildPreviewHeader(right);
     this.preview = new Preview(right);
-    // Alt + wheel keeps the dropdown honest about the factor in use.
-    this.preview.enableWheelZoom((f) => {
-      this.zoomSel.value = String(
-        ["0.5", "0.75", "1", "1.5", "2"].find((z) => Math.abs(Number(z) - f) < 0.01) ?? "",
-      );
-    });
+    // Alt + wheel keeps the dropdown honest about the factor in use. The wheel
+    // lands on values no preset matches, so rather than blanking the control it
+    // grows an option showing the real percentage.
+    this.preview.enableWheelZoom((f) => this.showZoom(f));
 
     await this.reload();
   }
@@ -100,7 +101,7 @@ export class DesignerView extends ItemView {
 
     this.zoomSel = field(t("designer.zoom")).createEl("select", { cls: "dropdown" });
     this.zoomSel.createEl("option", { value: "fit", text: t("designer.zoomFit") });
-    for (const z of ["0.5", "0.75", "1", "1.5", "2"]) {
+    for (const z of ZOOM_PRESETS) {
       this.zoomSel.createEl("option", { value: z, text: `${Math.round(Number(z) * 100)}%` });
     }
     this.zoomSel.addEventListener("change", () => {
@@ -111,6 +112,24 @@ export class DesignerView extends ItemView {
     bar.createDiv({ cls: "pressmark-bar-spacer" });
     bar.createSpan({ cls: "pressmark-hint", text: t("designer.zoomHint") });
 
+  }
+
+  /** Reflects an arbitrary zoom factor in the dropdown. */
+  private showZoom(f: number): void {
+    const pct = `${Math.round(f * 100)}%`;
+    const preset = ZOOM_PRESETS.find((z) => Math.abs(Number(z) - f) < 0.005);
+    if (preset) {
+      this.customOpt?.remove();
+      this.customOpt = undefined;
+      this.zoomSel.value = preset;
+      return;
+    }
+    if (!this.customOpt) {
+      this.customOpt = this.zoomSel.createEl("option", { value: "__custom" });
+    }
+    this.customOpt.value = "__custom";
+    this.customOpt.setText(pct);
+    this.zoomSel.value = "__custom";
   }
 
   /** Re-renders the source document, then redraws everything. */
