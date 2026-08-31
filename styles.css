@@ -88,23 +88,72 @@
   line-height: 1.5;
 }
 
+/* Where the document is rendered before being captured.
+   Off-screen rather than hidden: `display:none` gives no layout, and Obsidian
+   will not draw a diagram it cannot measure. */
+.pressmark-offscreen {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;   /* A4 at 96dpi */
+  pointer-events: none;
+}
+
 /* ── Theme designer ──────────────────────────────────────────────────── */
+
+.pressmark-designer {
+  height: 100%;
+  padding: 0 1.2em 1em;
+  overflow: hidden;
+}
 
 .pressmark-designer-cols {
   display: grid;
-  grid-template-columns: minmax(300px, 380px) 1fr;
-  gap: 1.5em;
-  align-items: start;
+  grid-template-columns: minmax(320px, 400px) 1fr;
+  gap: 1.6em;
   height: 100%;
+  align-items: stretch;
+  min-height: 0;   /* lets the children actually scroll instead of overflowing */
 }
 
 .pressmark-designer-controls {
   overflow-y: auto;
-  max-height: calc(100vh - 140px);
-  padding-right: 0.5em;
+  min-height: 0;
+  padding-right: 0.6em;
 }
 
-.pressmark-designer-controls .setting-item { padding: 0.5em 0; border: none; }
+/* The descriptions are long on purpose — they explain a design decision, not a
+   field — so they get their own line instead of fighting the control. */
+.pressmark-designer-controls .setting-item {
+  display: block;
+  border: none;
+  padding: 0.7em 0 0.9em;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pressmark-designer-controls .setting-item-info { margin-right: 0; }
+
+.pressmark-designer-controls .setting-item-control {
+  justify-content: flex-start;
+  margin-top: 0.5em;
+  padding-left: 0;
+}
+
+.pressmark-designer-controls .setting-item-description {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+}
+
+.pressmark-designer-controls .setting-item-heading {
+  border-bottom: none;
+  padding-top: 1.4em;
+}
+
+.pressmark-designer-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 
 .pressmark-designer-bar {
   display: flex;
@@ -112,6 +161,7 @@
   justify-content: space-between;
   gap: 1em;
   margin-bottom: 0.8em;
+  flex: 0 0 auto;
 }
 
 .pressmark-designer-bar .setting-item {
@@ -122,8 +172,15 @@
 
 .pressmark-maximize { white-space: nowrap; }
 
-/* Maximized, the controls step aside and the page gets the whole view: a
-   column is fine for nudging a colour and useless for judging a page. */
+/* The canvas takes whatever vertical space is left, and the pages scroll
+   inside it. A fixed height leaves a desert under a one-page cover. */
+.pressmark-designer-preview .pressmark-canvas.is-filling {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Maximized, the controls step aside: a column is fine for nudging a colour
+   and useless for judging a page. */
 .pressmark-designer.is-maximized .pressmark-designer-cols {
   grid-template-columns: 1fr;
 }

@@ -45,8 +45,19 @@ export class Preview {
     return { canvas: this.canvas, info: this.info };
   }
 
-  /** Redraws with a theme and an already-rendered document body. */
-  render(theme: Resolved, title: string, bodyHTML: string, maxHeight = 520): void {
+  /**
+   * Redraws with a theme and an already-rendered document body.
+   *
+   * `fill` lets the canvas take whatever vertical space CSS gives it, instead
+   * of a fixed cap. The modal wants the cap — it is one panel among several.
+   * The designer wants the space — the page IS the point there.
+   */
+  render(
+    theme: Resolved,
+    title: string,
+    bodyHTML: string,
+    opts: { maxHeight?: number; fill?: boolean } = {},
+  ): void {
     let w = 8.27;
     let h = 11.69;
     try {
@@ -77,7 +88,7 @@ export class Preview {
       this.scaler.style.height = `${total}px`;
 
       this.drawBreaks(heightPx);
-      this.fit(widthPx, maxHeight);
+      this.fit(widthPx, opts);
       this.caption(theme);
     };
   }
@@ -98,16 +109,30 @@ export class Preview {
     }
   }
 
-  /** Scales the page to the width available, capping the visible height. */
-  private fit(widthPx: number, maxHeight: number): void {
+  /** Scales the page to the width available. */
+  private fit(widthPx: number, opts: { maxHeight?: number; fill?: boolean }): void {
     const available = this.canvas.clientWidth;
     if (!available) return;
     const f = Math.min(1, available / widthPx);
-    this.scaler.style.transform = `scale(${f})`;
-    // The break labels live inside the scaled element, so they shrink with it.
-    // This variable counter-scales them back to a readable size.
-    this.scaler.style.setProperty("--pm-scale", String(f));
-    this.canvas.style.height = `${Math.min(maxHeight, this.scaler.offsetHeight * f)}px`;
+
+    // The break labels live inside the scaled element and would shrink with it;
+    // the variable counter-scales them back to a readable size.
+    this.canvas.setCssProps({ "--pm-scale": String(f) });
+    this.scaler.setCssProps({
+      transform: `scale(${f})`,
+      "--pm-scale": String(f),
+    });
+
+    if (opts.fill) {
+      // CSS owns the height: the canvas takes the space it is given and the
+      // pages scroll inside it.
+      this.canvas.addClass("is-filling");
+      return;
+    }
+    this.canvas.removeClass("is-filling");
+    this.canvas.setCssProps({
+      height: `${Math.min(opts.maxHeight ?? 520, this.scaler.offsetHeight * f)}px`,
+    });
   }
 
   private caption(theme: Resolved): void {

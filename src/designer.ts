@@ -8,16 +8,11 @@
  * The controls are generated from the same tokenSchema / varSchema the settings
  * tab uses. One generator, two surfaces — a second one would drift.
  */
-import {
-  ItemView,
-  MarkdownRenderer,
-  Setting,
-  type WorkspaceLeaf,
-} from "obsidian";
+import { ItemView, Setting, type WorkspaceLeaf } from "obsidian";
 import type PressmarkPlugin from "./main";
 import type { Resolved, TokenDef } from "./theme";
 import { Preview } from "./preview";
-import { flattenRendered, WRAPPER } from "./render";
+import { renderBody } from "./render";
 import { titleFor, splitFrontmatter } from "./document";
 import { SAMPLES } from "./themes.generated";
 import { resolve } from "./locale";
@@ -98,7 +93,9 @@ export class DesignerView extends ItemView {
       max.createSpan({
         text: this.maximized ? t("designer.restore") : t("designer.maximize"),
       });
-      this.redraw();
+      // The grid has to reflow before the canvas reports its new width, or the
+      // page would be rescaled against the old one.
+      window.requestAnimationFrame(() => this.redraw());
     });
   }
 
@@ -108,10 +105,9 @@ export class DesignerView extends ItemView {
     const { fields, body } = splitFrontmatter(markdown);
     this.title = titleFor(fields, body, t("designer.untitled"));
 
-    const el = createDiv({ cls: WRAPPER });
-    await MarkdownRenderer.render(this.app, body, el, "", this);
-    flattenRendered(el);
-    this.bodyHTML = el.innerHTML;
+    // The same renderer the export uses. A second copy here is exactly what
+    // left the designer out of the diagram fix.
+    this.bodyHTML = await renderBody(this.app, body, "", this);
 
     this.theme = this.plugin.activeTheme;
     this.buildControls();
@@ -129,10 +125,9 @@ export class DesignerView extends ItemView {
 
   private redraw(): void {
     if (!this.theme) return;
-    // Maximized, the page gets the whole view; docked, it stays a thumbnail
-    // that still shows the cover and the first break.
-    const height = this.maximized ? this.contentEl.clientHeight - 120 : 460;
-    this.preview.render(this.theme, this.title, this.bodyHTML, Math.max(240, height));
+    // Always fill: in a designer the page is the point, and a preview boxed
+    // into a fixed height with empty space under it helps nobody.
+    this.preview.render(this.theme, this.title, this.bodyHTML, { fill: true });
   }
 
   private buildControls(): void {

@@ -78,6 +78,29 @@ function stripUI(root: HTMLElement): void {
   root.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
 }
 
+/**
+ * Waits for Obsidian to finish drawing diagrams.
+ *
+ * MarkdownRenderer.render() resolves before Mermaid has drawn: it hands back
+ * the container while the diagrams are still being laid out asynchronously.
+ * Reading innerHTML at that moment captures empty placeholders, and the PDF
+ * comes out with the diagrams missing and no error anywhere.
+ *
+ * Resolves as soon as every diagram has an <svg>, or gives up after the
+ * timeout — a diagram that fails to draw must not stop the export.
+ */
+async function waitForDiagrams(root: HTMLElement, timeoutMs = 4000): Promise<void> {
+  const pending = () =>
+    Array.from(root.querySelectorAll(".mermaid")).filter((e) => !e.querySelector("svg")).length;
+
+  if (pending() === 0) return;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => window.setTimeout(r, 40));
+    if (pending() === 0) return;
+  }
+}
+
 export async function renderBody(
   app: App,
   markdown: string,
@@ -85,8 +108,21 @@ export async function renderBody(
   component: Component,
 ): Promise<string> {
   const el = createDiv({ cls: WRAPPER });
-  await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
-  stripUI(el);
-  flattenRendered(el);
-  return el.innerHTML;
+
+  // Attached, off-screen, on purpose. A detached element never gets laid out,
+  // and Obsidian will not draw a diagram it cannot measure — which is why the
+  // diagrams were coming out empty. The class also pins the width to A4 at
+  // 96dpi, so diagrams size themselves to the page they are headed for.
+  el.addClass("pressmark-offscreen");
+  document.body.appendChild(el);
+
+  try {
+    await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
+    await waitForDiagrams(el);
+    stripUI(el);
+    flattenRendered(el);
+    return el.innerHTML;
+  } finally {
+    el.remove();
+  }
 }
