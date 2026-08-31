@@ -23,11 +23,19 @@
 
 .pressmark-form .setting-item { padding: 0.5em 0; border: none; }
 
-.pressmark-vista { position: sticky; top: 0; }
+.pressmark-view { position: sticky; top: 0; }
 
 /* El lienzo recorta y da scroll; adentro va la carilla a escala real. */
-.pressmark-lienzo {
+.pressmark-canvas {
   overflow: auto;
+  /* Breathing room around the sheets so they read as paper on a desk rather
+     than as panels butted against the edge. */
+  padding: 18px 0 24px;
+  /* The stage carries the page's visual size, so centring it here puts the
+     page in the middle instead of pinned to the left with dead space beside. */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
   background: var(--background-secondary);
@@ -37,53 +45,201 @@
 /* Se dibuja al tamano REAL del papel y se achica con transform. Achicar el
    iframe en vez de escalarlo cambiaria el ancho de columna y la vista previa
    dejaria de predecir donde cortan las lineas. */
-.pressmark-escala {
+/* Sized to the SCALED page: transform does not change layout size, so this is
+   what gives the page something to be centred as. */
+.pressmark-stage {
   position: relative;
-  transform-origin: top left;
-  --pm-escala: 1;
+  flex: 0 0 auto;
+  margin: 0 auto;
 }
 
+/* Carries the transform. The stage outside it carries the scaled size for
+   centring: doing both on one element scales it twice. */
+.pressmark-sheets {
+  transform-origin: top left;
+  --pm-scale: 1;
+}
+
+/* One sheet per page, with a gap between: the way a PDF viewer shows them,
+   instead of one long scroll with a line drawn across it. */
+.pressmark-sheet {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 22%);
+  margin-bottom: calc(26px / var(--pm-scale, 1));
+  border-radius: calc(2px / var(--pm-scale, 1));
+}
+
+.pressmark-sheet:last-child { margin-bottom: 0; }
+
+/* The page's content box. This is what clips, not the sheet: clipping at the
+   sheet leaves the margins showing text that belongs to the next page. */
+.pressmark-page {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+/* The same document in every sheet, shifted so each shows its own page. */
 .pressmark-preview {
+  position: absolute;
+  left: 0;
   display: block;
   border: 0;
-  background: #fff;
-  width: 100%;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Header and footer are drawn per sheet: in the PDF printToPDF puts them
+   there, outside the document, so nothing in the page would show them. */
+.pressmark-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.pressmark-band.is-header { top: 8px; }
+.pressmark-band.is-footer { bottom: 8px; }
+
+/* Measures the document height off-screen so the page count is known before
+   any sheet is built. */
+.pressmark-probe {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  height: 400px;
+  border: 0;
+  visibility: hidden;
+}
+
+.pressmark-more {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: calc(12px / var(--pm-scale, 1));
+  padding: calc(10px / var(--pm-scale, 1)) 0;
 }
 
 /* Donde Chromium va a cortar. Aproximado, pero suficiente para ver si un
    titulo o una tabla quedan a caballo entre dos carillas. */
-.pressmark-cortes {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.pressmark-corte {
-  position: absolute;
-  left: 0;
-  right: 0;
-  /* Contra-escalado: el contenedor esta a scale(--pm-escala) y sin esto la
-     linea se afinaria hasta desaparecer. */
-  border-top: calc(1.5px / var(--pm-escala)) dashed rgb(220 38 38 / 60%);
-}
-
-.pressmark-corte span {
-  position: absolute;
-  right: calc(8px / var(--pm-escala));
-  top: calc(5px / var(--pm-escala));
-  padding: calc(2px / var(--pm-escala)) calc(7px / var(--pm-escala));
-  border-radius: calc(3px / var(--pm-escala));
-  background: rgb(220 38 38 / 85%);
-  color: #fff;
-  font-family: var(--font-interface);
-  font-size: calc(11px / var(--pm-escala));
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .pressmark-info {
   margin-top: 0.6em;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1.5;
+}
+
+/* Where the document is rendered before being captured.
+   Off-screen rather than hidden: `display:none` gives no layout, and Obsidian
+   will not draw a diagram it cannot measure. */
+.pressmark-offscreen {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;   /* A4 at 96dpi */
+  pointer-events: none;
+}
+
+/* ── Theme designer ──────────────────────────────────────────────────── */
+
+.pressmark-designer {
+  height: 100%;
+  padding: 0 1.2em 1em;
+  overflow: hidden;
+}
+
+.pressmark-designer-cols {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) 1fr;
+  gap: 1.6em;
+  height: 100%;
+  align-items: stretch;
+  min-height: 0;   /* lets the children actually scroll instead of overflowing */
+}
+
+.pressmark-designer-controls {
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 0.6em;
+}
+
+/* The descriptions are long on purpose — they explain a design decision, not a
+   field — so they get their own line instead of fighting the control. */
+.pressmark-designer-controls .setting-item {
+  display: block;
+  border: none;
+  padding: 0.7em 0 0.9em;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.pressmark-designer-controls .setting-item-info { margin-right: 0; }
+
+.pressmark-designer-controls .setting-item-control {
+  justify-content: flex-start;
+  margin-top: 0.5em;
+  padding-left: 0;
+}
+
+.pressmark-designer-controls .setting-item-description {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+}
+
+.pressmark-designer-controls .setting-item-heading {
+  border-bottom: none;
+  padding-top: 1.4em;
+}
+
+/* A compact toolbar: each label sits against its own control instead of being
+   pushed to the far side of a full-width row. */
+.pressmark-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.1em;
+  margin-bottom: 0.9em;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.pressmark-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.pressmark-field-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.pressmark-bar-spacer { flex: 1 1 auto; }
+
+.pressmark-hint {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+.pressmark-designer-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+
+/* The canvas takes whatever vertical space is left, and the pages scroll
+   inside it. A fixed height leaves a desert under a one-page cover. */
+.pressmark-designer-preview .pressmark-canvas.is-filling {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+
+/* A diagram Obsidian would not draw, shown as its own source rather than as
+   the permission prompt that was landing in the PDF. */
+.pressmark-undrawn {
+  opacity: 0.85;
 }

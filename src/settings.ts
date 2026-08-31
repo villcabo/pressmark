@@ -69,6 +69,21 @@ export class SettingsTab extends PluginSettingTab {
             },
           },
           {
+            name: t("set.openDesigner"),
+            desc: t("set.openDesignerDesc"),
+            // Rendered rather than a plain button: this row carries a live
+            // thumbnail of the selected format, so the setting shows what it
+            // is talking about instead of describing it.
+            render: (setting) => {
+              const el = setting.controlEl;
+              el.empty();
+              el.createEl("button", { text: t("set.open"), cls: "mod-cta" }).addEventListener(
+                "click",
+                () => void this.plugin.openDesigner(),
+              );
+            },
+          },
+          {
             name: t("set.saveAsFormat"),
             desc: t("set.saveAsFormatDesc"),
             // Obsidian calls action() again on every re-render, so this has to

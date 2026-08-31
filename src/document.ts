@@ -38,7 +38,11 @@ export function coverCSS(t: Resolved): string {
 function paddingPreview(m: Margin | undefined): string {
   if (!m) return "";
   const v = (x: string | undefined) => x ?? "0";
-  return `body { padding: ${v(m.top)} ${v(m.right)} ${v(m.bottom)} ${v(m.left)}; box-sizing: border-box; }`;
+  // Sides only. The top and bottom margins are NOT padding here: in the PDF
+  // every page carries them, and a single pad at each end of one continuous
+  // flow would put content exactly where each page's margins should be. The
+  // preview offsets each sheet by them instead.
+  return `body { padding: 0 ${v(m.right)} 0 ${v(m.left)}; box-sizing: border-box; }`;
 }
 
 export function documentHTML(
