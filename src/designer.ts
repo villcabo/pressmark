@@ -82,6 +82,14 @@ export class DesignerView extends ItemView {
       });
     });
 
+    new Setting(bar).setName(t("designer.zoom")).addDropdown((d) => {
+      d.addOption("fit", t("designer.zoomFit"));
+      for (const z of ["0.5", "0.75", "1", "1.5"]) d.addOption(z, `${Number(z) * 100}%`);
+      d.setValue("fit").onChange((v) => {
+        this.preview.setZoom(v === "fit" ? "fit" : Number(v));
+      });
+    });
+
     // Deliberately prominent: the side-by-side pane is fine for nudging a
     // colour and useless for judging a page.
     const max = bar.createEl("button", { cls: "pressmark-maximize mod-cta" });

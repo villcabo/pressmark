@@ -26,15 +26,24 @@ export interface PreviewParts {
 
 export class Preview {
   private frame: HTMLIFrameElement;
+  private stage: HTMLElement;
   private scaler: HTMLElement;
   private breaks: HTMLElement;
   private canvas: HTMLElement;
   private info: HTMLElement;
   private pages = 1;
+  /** "fit", or an explicit factor such as 0.75. */
+  private zoom: "fit" | number = "fit";
+  private lastWidthPx = 0;
+  private lastOpts: { maxHeight?: number; fill?: boolean } = {};
 
   constructor(parent: HTMLElement) {
     this.canvas = parent.createDiv({ cls: "pressmark-canvas" });
-    this.scaler = this.canvas.createDiv({ cls: "pressmark-scale" });
+    // A stage sized to the SCALED page. transform does not change layout size,
+    // so without this the page cannot be centred and leaves dead space beside
+    // it. The stage occupies the space the page visually takes.
+    this.stage = this.canvas.createDiv({ cls: "pressmark-stage" });
+    this.scaler = this.stage.createDiv({ cls: "pressmark-scale" });
     this.frame = this.scaler.createEl("iframe", { cls: "pressmark-preview" });
     this.frame.setAttr("sandbox", "allow-same-origin");
     this.breaks = this.scaler.createDiv({ cls: "pressmark-breaks" });
@@ -109,11 +118,32 @@ export class Preview {
     }
   }
 
-  /** Scales the page to the width available. */
+  /** Sets the zoom and redraws at the new factor. */
+  setZoom(zoom: "fit" | number): void {
+    this.zoom = zoom;
+    if (this.lastWidthPx) this.fit(this.lastWidthPx, this.lastOpts);
+  }
+
+  /** The factor currently applied, for a caller that wants to label it. */
+  get scale(): number {
+    return this.currentFactor(this.lastWidthPx);
+  }
+
+  private currentFactor(widthPx: number): number {
+    if (this.zoom !== "fit") return this.zoom;
+    const available = this.canvas.clientWidth;
+    if (!available || !widthPx) return 1;
+    // Room for the scrollbar, so fitting does not itself cause one.
+    return Math.min(1, (available - 24) / widthPx);
+  }
+
+  /** Scales the page and centres it. */
   private fit(widthPx: number, opts: { maxHeight?: number; fill?: boolean }): void {
+    this.lastWidthPx = widthPx;
+    this.lastOpts = opts;
     const available = this.canvas.clientWidth;
     if (!available) return;
-    const f = Math.min(1, available / widthPx);
+    const f = this.currentFactor(widthPx);
 
     // The break labels live inside the scaled element and would shrink with it;
     // the variable counter-scales them back to a readable size.
@@ -121,6 +151,12 @@ export class Preview {
     this.scaler.setCssProps({
       transform: `scale(${f})`,
       "--pm-scale": String(f),
+    });
+
+    // The stage takes the page's visual size so it can be centred.
+    this.stage.setCssProps({
+      width: `${widthPx * f}px`,
+      height: `${this.scaler.offsetHeight * f}px`,
     });
 
     if (opts.fill) {

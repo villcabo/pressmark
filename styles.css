@@ -28,6 +28,11 @@
 /* El lienzo recorta y da scroll; adentro va la carilla a escala real. */
 .pressmark-canvas {
   overflow: auto;
+  /* The stage carries the page's visual size, so centring it here puts the
+     page in the middle instead of pinned to the left with dead space beside. */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   border: 1px solid var(--background-modifier-border);
   border-radius: 4px;
   background: var(--background-secondary);
@@ -37,6 +42,14 @@
 /* Se dibuja al tamano REAL del papel y se achica con transform. Achicar el
    iframe en vez de escalarlo cambiaria el ancho de columna y la vista previa
    dejaria de predecir donde cortan las lineas. */
+/* Sized to the SCALED page: transform does not change layout size, so this is
+   what gives the page something to be centred as. */
+.pressmark-stage {
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0 auto;
+}
+
 .pressmark-scale {
   position: relative;
   transform-origin: top left;
@@ -187,4 +200,10 @@
 
 .pressmark-designer.is-maximized .pressmark-designer-controls {
   display: none;
+}
+
+/* A diagram Obsidian would not draw, shown as its own source rather than as
+   the permission prompt that was landing in the PDF. */
+.pressmark-undrawn {
+  opacity: 0.85;
 }

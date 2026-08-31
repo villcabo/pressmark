@@ -101,6 +101,30 @@ async function waitForDiagrams(root: HTMLElement, timeoutMs = 4000): Promise<voi
   }
 }
 
+/**
+ * Replaces a diagram that never drew with its own source.
+ *
+ * Obsidian asks for permission before rendering Mermaid in a vault, and until
+ * it is granted the container holds the prompt — "Display Mermaid diagrams in
+ * this vault?" — instead of a diagram. That prompt was being printed into the
+ * PDF, which is worse than showing nothing.
+ *
+ * The source is the honest fallback: the reader sees what the diagram was
+ * meant to be, and the author sees that something needs enabling.
+ */
+function replaceUndrawnDiagrams(root: HTMLElement): void {
+  for (const el of Array.from(root.querySelectorAll(".mermaid"))) {
+    if (el.querySelector("svg")) continue;
+
+    // The source survives on the element in Obsidian's own attribute; when it
+    // does not, the element's text is the next best thing.
+    const source = el.getAttribute("data-mermaid-source") ?? el.textContent ?? "";
+    const pre = createEl("pre", { cls: "pressmark-undrawn" });
+    pre.createEl("code", { text: source.trim() });
+    el.replaceWith(pre);
+  }
+}
+
 export async function renderBody(
   app: App,
   markdown: string,
@@ -119,6 +143,7 @@ export async function renderBody(
   try {
     await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
     await waitForDiagrams(el);
+    replaceUndrawnDiagrams(el);
     stripUI(el);
     flattenRendered(el);
     return el.innerHTML;
