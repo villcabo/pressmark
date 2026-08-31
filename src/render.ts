@@ -20,7 +20,7 @@ export * from "./document";
  * blocks stop being DIRECT children of the wrapper and the cover page no
  * longer matches. Unwrapping them IS the contract, not tidiness.
  */
-function flatten(root: HTMLElement): void {
+export function flattenRendered(root: HTMLElement): void {
   const HTMLEl = root.doc.defaultView?.HTMLElement ?? HTMLElement;
   let changed = true;
   while (changed) {
@@ -78,6 +78,72 @@ function stripUI(root: HTMLElement): void {
   root.querySelectorAll("[tabindex]").forEach((e) => e.removeAttribute("tabindex"));
 }
 
+/**
+ * Waits for Obsidian to finish drawing diagrams.
+ *
+ * MarkdownRenderer.render() resolves before Mermaid has drawn: it hands back
+ * the container while the diagrams are still being laid out asynchronously.
+ * Reading innerHTML at that moment captures empty placeholders, and the PDF
+ * comes out with the diagrams missing and no error anywhere.
+ *
+ * Resolves as soon as every diagram has an <svg>, or gives up after the
+ * timeout — a diagram that fails to draw must not stop the export.
+ */
+async function waitForDiagrams(root: HTMLElement, timeoutMs = 4000): Promise<void> {
+  const pending = () =>
+    Array.from(root.querySelectorAll(".mermaid")).filter((e) => !e.querySelector("svg")).length;
+
+  if (pending() === 0) return;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => window.setTimeout(r, 40));
+    if (pending() === 0) return;
+  }
+}
+
+/**
+ * Replaces a diagram that never drew with its own source.
+ *
+ * Obsidian asks for permission before rendering Mermaid in a vault, and until
+ * it is granted the container holds the prompt — "Display Mermaid diagrams in
+ * this vault?" — instead of a diagram. That prompt was being printed into the
+ * PDF, which is worse than showing nothing.
+ *
+ * The source is the honest fallback: the reader sees what the diagram was
+ * meant to be, and the author sees that something needs enabling.
+ */
+function replaceUndrawnDiagrams(root: HTMLElement): void {
+  // A guarded diagram is a whole subtree, not the .mermaid element: Obsidian
+  // wraps it in `.mermaid-wrapper.is-guarded` holding the prompt in
+  // `.mermaid-guard-text` and the diagram in `.mermaid-guard-source`. Aiming
+  // at `.mermaid` replaced the wrong node and left the prompt on the page —
+  // and in the PDF. These names come from Obsidian's own bundle, not a guess.
+  for (const wrapper of Array.from(root.querySelectorAll(".mermaid-wrapper.is-guarded"))) {
+    const source = wrapper.querySelector(".mermaid-guard-source")?.textContent ?? "";
+    wrapper.replaceWith(undrawn(source));
+  }
+
+  // Anything else that never got an <svg>: a diagram that failed to draw, or a
+  // render that timed out.
+  for (const el of Array.from(root.querySelectorAll(".mermaid"))) {
+    if (el.querySelector("svg")) continue;
+    el.replaceWith(undrawn(el.textContent ?? ""));
+  }
+}
+
+/**
+ * The fallback for a diagram that never drew: its own source.
+ *
+ * The reader sees what the diagram was meant to be, and the author sees that
+ * something needs enabling. Both beat a stray permission prompt, and both beat
+ * a silent gap.
+ */
+function undrawn(source: string): HTMLElement {
+  const pre = createEl("pre", { cls: "pressmark-undrawn" });
+  pre.createEl("code", { text: source.trim() });
+  return pre;
+}
+
 export async function renderBody(
   app: App,
   markdown: string,
@@ -85,8 +151,22 @@ export async function renderBody(
   component: Component,
 ): Promise<string> {
   const el = createDiv({ cls: WRAPPER });
-  await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
-  stripUI(el);
-  flatten(el);
-  return el.innerHTML;
+
+  // Attached, off-screen, on purpose. A detached element never gets laid out,
+  // and Obsidian will not draw a diagram it cannot measure — which is why the
+  // diagrams were coming out empty. The class also pins the width to A4 at
+  // 96dpi, so diagrams size themselves to the page they are headed for.
+  el.addClass("pressmark-offscreen");
+  document.body.appendChild(el);
+
+  try {
+    await MarkdownRenderer.render(app, markdown, el, sourcePath, component);
+    await waitForDiagrams(el);
+    replaceUndrawnDiagrams(el);
+    stripUI(el);
+    flattenRendered(el);
+    return el.innerHTML;
+  } finally {
+    el.remove();
+  }
 }
