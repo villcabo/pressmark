@@ -60,7 +60,7 @@ const EN = {
   "set.customizationDesc":
     'These controls come from the tokenSchema of "{id}". Changes are saved as overrides and never touch the theme pack.',
   "set.resetAll": "Reset all",
-  "set.backToThemeValue": "Back to the theme value",
+  "set.clearToReset": "Clear a field to go back to the format's own value.",
   "set.loadError": "Could not load the theme",
   "group.palette": "Palette",
   "group.typography": "Typography",
@@ -126,7 +126,7 @@ const ES: Partial<Record<Key, string>> = {
   "set.customizationDesc":
     'Estos controles salen del tokenSchema de "{id}". Los cambios se guardan como overrides y no tocan el theme pack.',
   "set.resetAll": "Restablecer todo",
-  "set.backToThemeValue": "Volver al valor del theme",
+  "set.clearToReset": "Vaciá un campo para volver al valor del formato.",
   "set.loadError": "No pude cargar el theme",
   "group.palette": "Paleta",
   "group.typography": "Tipografía",

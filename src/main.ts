@@ -25,11 +25,8 @@ import {
 } from "./render";
 import { bytesOf, generate, printOptionsFor } from "./pdf";
 import { applyOptions, ExportModal, type ExportOptions } from "./export-modal";
-import {
-  DEFAULT_SETTINGS,
-  SettingsTab,
-  type Settings,
-} from "./settings";
+import { SettingsTab } from "./settings";
+import { DEFAULT_SETTINGS, type Settings } from "./config";
 import { migrateSettings } from "./migrate";
 import { initLanguage, language, t } from "./i18n";
 
@@ -38,6 +35,18 @@ export default class PressmarkPlugin extends Plugin {
   private packs!: ThemeFS;
   /** Frontmatter of the note open in the modal, for {{fm.field}} in the bands. */
   private fm: Record<string, string> | null = null;
+
+  /**
+   * The selected theme, already resolved and with overrides applied.
+   *
+   * getSettingDefinitions() has to answer synchronously, and resolving a theme
+   * reads files. So it is cached here and refreshed whenever the selection or
+   * an override changes.
+   */
+  activeTheme: Resolved | null = null;
+
+  /** Selectable theme ids, for the settings dropdown. */
+  themeIds: string[] = [];
 
   override async onload(): Promise<void> {
     // Resolved once: the UI and the theme packs HAVE to use the SAME
@@ -49,6 +58,8 @@ export default class PressmarkPlugin extends Plugin {
     // which ships inside the plugin.
     this.packs = overlay(vaultFS(this.app.vault), embeddedFS());
 
+    this.themeIds = await this.availableThemes();
+    await this.refreshActiveTheme();
     this.addSettingTab(new SettingsTab(this.app, this));
 
     this.addRibbonIcon("file-output", t("ribbon"), () => {
@@ -101,6 +112,17 @@ export default class PressmarkPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /** Reloads the cached theme. Cheap: the packs are embedded or in the vault. */
+  async refreshActiveTheme(): Promise<void> {
+    try {
+      this.activeTheme = await this.loadTheme(this.settings.theme);
+    } catch {
+      // A theme that no longer exists must not break the settings tab; the
+      // dropdown still lets the user pick a working one.
+      this.activeTheme = null;
+    }
   }
 
   async availableThemes(): Promise<string[]> {
