@@ -72,16 +72,6 @@ export class SettingsTab extends PluginSettingTab {
             name: t("set.openWhenDone"),
             control: { type: "toggle", key: "openWhenDone" },
           },
-          {
-            name: t("set.outputFolder"),
-            desc: t("set.outputFolderDesc"),
-            control: {
-              type: "folder",
-              key: "outputFolder",
-              placeholder: t("set.outputFolderPlaceholder"),
-              includeRoot: true,
-            },
-          },
         ],
       },
     ];

@@ -5,11 +5,12 @@ const production = process.argv[2] === "production";
 const ctx = await esbuild.context({
   entryPoints: ["src/main.ts"],
   bundle: true,
-  // Provided by the host at runtime; bundling them breaks the plugin. The
-  // source imports no Node builtins any more — the temp file the print window
-  // needs goes through the Vault API instead of node:fs — so nothing else
-  // belongs in this list.
-  external: ["obsidian", "electron", "@electron/remote"],
+  // Provided by the host at runtime; bundling them breaks the plugin.
+  //
+  // The Node builtins are listed one by one rather than pulled from
+  // `builtin-modules`: the plugin uses exactly one, and spelling it out keeps
+  // the list honest about how much of Node this actually reaches for.
+  external: ["obsidian", "electron", "@electron/remote", "node:fs/promises"],
   format: "cjs",
   target: "es2022",
   logLevel: "info",

@@ -9,6 +9,7 @@
  * Requires isDesktopOnly: true in the manifest. The store's policy allows it
  * with that flag declared, and there are published plugins that do the same.
  */
+import { writeFile } from "node:fs/promises";
 import { FileSystemAdapter, normalizePath, type Vault } from "obsidian";
 import type { PrintOptions } from "./paper";
 
@@ -87,7 +88,60 @@ export async function generate(
   }
 }
 
+/**
+ * Asks the user where the PDF goes.
+ *
+ * Returns null when the dialog is cancelled, which has to cancel the export —
+ * not fall back to some default location the user did not pick.
+ */
+export async function askWhereToSave(
+  suggestedName: string,
+  startIn: string,
+): Promise<string | null> {
+  const remote = requireRemote();
+  const { canceled, filePath } = await remote.dialog.showSaveDialog({
+    title: "Export to PDF",
+    defaultPath: `${startIn}/${sanitizeFileName(suggestedName)}.pdf`,
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    properties: ["createDirectory", "showOverwriteConfirmation"],
+  });
+  if (canceled || !filePath) return null;
+  return filePath;
+}
+
+/**
+ * Writes the PDF where the user chose.
+ *
+ * This is the plugin's one write outside the vault, and it is deliberate: the
+ * destination came from a system save dialog the user just filled in. The Vault
+ * API cannot reach outside the vault, so there is no way to honour that choice
+ * without it.
+ */
+export async function writePdf(path: string, bytes: Uint8Array): Promise<void> {
+  await writeFile(path, bytes);
+}
+
+/** Strips what no filesystem accepts, so a heading can be a filename. */
+export function sanitizeFileName(name: string): string {
+  return (
+    name
+      .replace(/[\\/:*?"<>|]/g, "-")
+      .replace(/\s+/g, " ")
+      .replace(/^\.+/, "")
+      .trim()
+      .slice(0, 120) || "document"
+  );
+}
+
 interface Remote {
+  dialog: {
+    showSaveDialog(options: {
+      title?: string;
+      defaultPath?: string;
+      filters?: { name: string; extensions: string[] }[];
+      properties?: string[];
+    }): Promise<{ canceled: boolean; filePath?: string }>;
+  };
   BrowserWindow: new (o: unknown) => {
     loadFile(p: string): Promise<void>;
     webContents: {

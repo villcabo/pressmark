@@ -46,6 +46,15 @@ describe("migrateSettings", () => {
     expect(migrateSettings(once)).toEqual(once);
   });
 
+  test("drops the retired outputFolder setting", () => {
+    // A vault-relative folder cannot become an absolute one, and guessing
+    // would send exports somewhere the user never picked.
+    const stored = { ...base(), outputFolder: "exports" } as unknown as Settings;
+    const out = migrateSettings(stored);
+    expect("outputFolder" in out).toBe(false);
+    expect(out.lastDirectory).toBe("");
+  });
+
   test("survives settings with nothing in them", () => {
     const out = migrateSettings(base());
     expect(out.overrides).toEqual({});
