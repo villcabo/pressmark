@@ -207,15 +207,6 @@
   min-height: 0;
 }
 
-/* Maximized, the controls step aside: a column is fine for nudging a colour
-   and useless for judging a page. */
-.pressmark-designer.is-maximized .pressmark-designer-cols {
-  grid-template-columns: 1fr;
-}
-
-.pressmark-designer.is-maximized .pressmark-designer-controls {
-  display: none;
-}
 
 /* A diagram Obsidian would not draw, shown as its own source rather than as
    the permission prompt that was landing in the PDF. */

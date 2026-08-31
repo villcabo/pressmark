@@ -34,9 +34,7 @@ export class DesignerView extends ItemView {
   private source = "01-report";
   private bodyHTML = "";
   private title = "";
-  private maximized = false;
   private zoomSel!: HTMLSelectElement;
-  private maxBtn!: HTMLButtonElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -113,17 +111,6 @@ export class DesignerView extends ItemView {
     bar.createDiv({ cls: "pressmark-bar-spacer" });
     bar.createSpan({ cls: "pressmark-hint", text: t("designer.zoomHint") });
 
-    // Deliberately prominent: the docked pane is fine for nudging a colour and
-    // useless for judging a page.
-    this.maxBtn = bar.createEl("button", { cls: "mod-cta", text: t("designer.maximize") });
-    this.maxBtn.addEventListener("click", () => {
-      this.maximized = !this.maximized;
-      this.contentEl.toggleClass("is-maximized", this.maximized);
-      this.maxBtn.setText(this.maximized ? t("designer.restore") : t("designer.maximize"));
-      // The grid has to reflow before the canvas reports its new width, or the
-      // page would be rescaled against the old one.
-      window.requestAnimationFrame(() => this.redraw());
-    });
   }
 
   /** Re-renders the source document, then redraws everything. */
