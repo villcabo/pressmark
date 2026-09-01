@@ -36,6 +36,8 @@ export class DesignerView extends ItemView {
   private source = "01-report";
   private bodyHTML = "";
   private title = "";
+  private themeSel!: HTMLSelectElement;
+  private fm: Record<string, string> | null = null;
   private zoomSel!: HTMLSelectElement;
   private customOpt?: HTMLOptionElement;
 
@@ -63,12 +65,19 @@ export class DesignerView extends ItemView {
     root.empty();
     root.addClass("pressmark-designer");
 
+    // Spans both columns. It used to sit inside the preview column, which
+    // started the document 45px below the first control and made the two sides
+    // read as unrelated panels rather than one view.
+    this.buildToolbar(root);
+
     const cols = root.createDiv({ cls: "pressmark-designer-cols" });
     this.controlsEl = cols.createDiv({ cls: "pressmark-designer-controls" });
 
     const right = cols.createDiv({ cls: "pressmark-designer-preview" });
-    this.buildPreviewHeader(right);
-    this.preview = new Preview(right);
+    // Same printer as the export, and the same one the export modal uses. The
+    // sample's own frontmatter goes in so {{fm.field}} in a band resolves here
+    // exactly as it will in the file.
+    this.preview = new Preview(right, (th, ti, b) => this.plugin.makePdf(th, ti, b, this.fm));
     // Alt + wheel keeps the dropdown honest about the factor in use. The wheel
     // lands on values no preset matches, so rather than blanking the control it
     // grows an option showing the real percentage.
@@ -77,7 +86,16 @@ export class DesignerView extends ItemView {
     await this.reload();
   }
 
-  private buildPreviewHeader(parent: HTMLElement): void {
+  /**
+   * The three choices that say what is on screen: which theme, which document,
+   * how big.
+   *
+   * The theme picker belongs here and not in the controls column below. Down
+   * there it was the one row with no description and nothing to edit, sitting
+   * above a heading — it read as a mistake. Up here it is what it is: the same
+   * kind of choice as the other two.
+   */
+  private buildToolbar(parent: HTMLElement): void {
     const bar = parent.createDiv({ cls: "pressmark-bar" });
 
     // Built by hand rather than with Setting: a Setting stretches to the full
@@ -87,6 +105,15 @@ export class DesignerView extends ItemView {
       wrap.createSpan({ cls: "pressmark-field-label", text: labelText });
       return wrap;
     };
+
+    this.themeSel = field(t("designer.basedOn")).createEl("select", { cls: "dropdown" });
+    this.themeSel.addEventListener("change", () => {
+      this.plugin.settings.theme = this.themeSel.value;
+      void this.plugin.saveSettings().then(async () => {
+        await this.plugin.refreshActiveTheme();
+        await this.reload();
+      });
+    });
 
     const docSel = field(t("designer.document")).createEl("select", { cls: "dropdown" });
     for (const id of sampleIds()) {
@@ -111,12 +138,10 @@ export class DesignerView extends ItemView {
 
     bar.createDiv({ cls: "pressmark-bar-spacer" });
     bar.createSpan({ cls: "pressmark-hint", text: t("designer.zoomHint") });
-
   }
 
   /** Reflects an arbitrary zoom factor in the dropdown. */
   private showZoom(f: number): void {
-    const pct = `${Math.round(f * 100)}%`;
     const preset = ZOOM_PRESETS.find((z) => Math.abs(Number(z) - f) < 0.005);
     if (preset) {
       this.customOpt?.remove();
@@ -124,11 +149,8 @@ export class DesignerView extends ItemView {
       this.zoomSel.value = preset;
       return;
     }
-    if (!this.customOpt) {
-      this.customOpt = this.zoomSel.createEl("option", { value: "__custom" });
-    }
-    this.customOpt.value = "__custom";
-    this.customOpt.setText(pct);
+    this.customOpt ??= this.zoomSel.createEl("option", { value: "__custom" });
+    this.customOpt.setText(`${Math.round(f * 100)}%`);
     this.zoomSel.value = "__custom";
   }
 
@@ -136,6 +158,7 @@ export class DesignerView extends ItemView {
   async reload(): Promise<void> {
     const markdown = await this.sourceMarkdown();
     const { fields, body } = splitFrontmatter(markdown);
+    this.fm = fields;
     this.title = titleFor(fields, body, t("designer.untitled"));
 
     // The same renderer the export uses. A second copy here is exactly what
@@ -143,8 +166,18 @@ export class DesignerView extends ItemView {
     this.bodyHTML = await renderBody(this.app, body, "", this);
 
     this.theme = this.plugin.activeTheme;
+    this.fillThemes();
     this.buildControls();
     this.redraw();
+  }
+
+  /** Repopulated on every reload: saving customizations as a pack adds an entry. */
+  private fillThemes(): void {
+    this.themeSel.empty();
+    for (const id of this.plugin.themeIds) {
+      this.themeSel.createEl("option", { value: id, text: id });
+    }
+    this.themeSel.value = this.plugin.settings.theme;
   }
 
   private async sourceMarkdown(): Promise<string> {
@@ -158,26 +191,13 @@ export class DesignerView extends ItemView {
 
   private redraw(): void {
     if (!this.theme) return;
-    // Always fill: in a designer the page is the point, and a preview boxed
-    // into a fixed height with empty space under it helps nobody.
-    this.preview.render(this.theme, this.title, this.bodyHTML, { fill: true });
+    this.preview.render(this.theme, this.title, this.bodyHTML);
   }
 
   private buildControls(): void {
     const c = this.controlsEl;
     c.empty();
     const theme = this.theme;
-
-    new Setting(c).setName(t("designer.basedOn")).addDropdown((d) => {
-      for (const id of this.plugin.themeIds) d.addOption(id, id);
-      d.setValue(this.plugin.settings.theme).onChange((v) => {
-        this.plugin.settings.theme = v;
-        void this.plugin.saveSettings().then(async () => {
-          await this.plugin.refreshActiveTheme();
-          await this.reload();
-        });
-      });
-    });
 
     if (!theme) {
       new Setting(c).setName(t("set.loadError")).setDesc(this.plugin.settings.theme);
@@ -293,6 +313,7 @@ export class DesignerView extends ItemView {
   }
 
   override async onClose(): Promise<void> {
+    this.preview.destroy();
     this.contentEl.empty();
   }
 }

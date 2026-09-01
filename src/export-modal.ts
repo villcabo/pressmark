@@ -1,15 +1,18 @@
 /**
  * Export modal: pick a format, adjust it, and SEE it before generating.
  *
- * The preview isn't decorative. It renders the document with the theme's
- * actual CSS and at the paper's real proportions, so the cover page, the
- * palette and wide tables overflowing are visible BEFORE the file gets
- * written. Switching themes doesn't re-render the markdown: it just
- * rewraps the already-rendered body with different CSS, which is instant.
+ * The preview isn't an approximation of the export: it IS the export. The same
+ * printToPDF call runs, and Chromium's own viewer shows the result, so the
+ * cover page, the palette, a wide table overflowing and the real page count are
+ * all visible BEFORE the file gets written.
+ *
+ * Switching formats does not re-render the markdown — that body is rendered
+ * once and handed in — but it does reprint, because page breaks are decided by
+ * the print, not by the markdown.
  */
 import { App, Modal, Notice, Setting, type TFile } from "obsidian";
 import type { Resolved, Page } from "./theme";
-import { Preview } from "./preview";
+import { Preview, type PdfMaker } from "./preview";
 import { t } from "./i18n";
 
 export interface ExportOptions {
@@ -29,6 +32,7 @@ interface Args {
   themes: string[];
   initial: ExportOptions;
   loadTheme: (id: string) => Promise<Resolved>;
+  makePdf: PdfMaker;
   onExport: (o: ExportOptions) => void;
 }
 
@@ -80,7 +84,7 @@ export class ExportModal extends Modal {
     const form = cols.createDiv({ cls: "pressmark-form" });
     const previewPane = cols.createDiv({ cls: "pressmark-view" });
 
-    this.preview = new Preview(previewPane);
+    this.preview = new Preview(previewPane, this.a.makePdf);
 
     this.buildForm(form);
 
@@ -169,7 +173,7 @@ export class ExportModal extends Modal {
       theme = applyOptions(await this.a.loadTheme(this.o.theme), this.o);
       this.theme = theme;
     } catch (e) {
-      this.preview.parts.info.setText(t("modal.formatError", { e: String(e) }));
+      this.preview.infoEl.setText(t("modal.formatError", { e: String(e) }));
       return;
     }
 
@@ -184,6 +188,7 @@ export class ExportModal extends Modal {
   }
 
   override onClose(): void {
+    this.preview.destroy();
     this.contentEl.empty();
   }
 }

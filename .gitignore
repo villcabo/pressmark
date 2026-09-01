@@ -8,6 +8,8 @@
 /testdata/out/
 *.pdf
 !/testdata/golden/*.pdf
+# Fixtures, not output: the PDF tests read these, so a clean clone needs them.
+!/testdata/pdf/*.pdf
 
 # Entorno
 .env

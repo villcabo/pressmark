@@ -13,6 +13,7 @@ import {
   TFile,
   FileSystemAdapter,
   normalizePath,
+  getLanguage,
 } from "obsidian";
 import { load, type Resolved, type ThemeFS } from "./theme";
 import { embeddedFS, overlay, vaultFS, userThemesFolder, USER_THEMES_SUBFOLDER } from "./sources";
@@ -55,7 +56,10 @@ export default class PressmarkPlugin extends Plugin {
   override async onload(): Promise<void> {
     // Resolved once: the UI and the theme packs HAVE to use the SAME
     // language, or the modal comes out in one and the PDF footer in another.
-    initLanguage();
+    // getLanguage() is official API as of 1.8.7, which the manifest requires.
+    // Reading the app's own private storage would work too, but it reaches into
+    // internals for something the API already exposes.
+    initLanguage(getLanguage());
     await this.loadSettings();
     // The user's own packs win; the embedded ones are the floor.
     // Inheritance crosses both layers: a user's own theme extends _base,
@@ -291,6 +295,7 @@ export default class PressmarkPlugin extends Plugin {
         themes: await this.availableThemes(),
         initial: this.savedOptions(),
         loadTheme: (id) => this.loadTheme(id),
+        makePdf: (th, ti, b) => this.makePdf(th, ti, b),
         onExport: (o) => {
           // Whatever gets chosen becomes the next default: nobody wants to
           // re-pick the format on every export.
@@ -306,6 +311,33 @@ export default class PressmarkPlugin extends Plugin {
     } finally {
       comp.unload();
     }
+  }
+
+  /**
+   * Builds the PDF bytes for an already-rendered body.
+   *
+   * The preview and the export go through THIS function, both of them. That is
+   * the whole reason it exists: the preview used to simulate pages by measuring
+   * a continuous flow, and it was wrong in both directions because a flow knows
+   * nothing about `page-break-inside`, orphans or a forced cover break. A
+   * preview that disagrees with the file is worse than no preview, so now they
+   * are the same bytes.
+   */
+  async makePdf(
+    theme: Resolved,
+    title: string,
+    bodyHTML: string,
+    fm: Record<string, string> | null = this.fm,
+  ): Promise<Uint8Array> {
+    const html = documentHTML(title, bodyHTML, theme);
+    const m = theme.page?.margin;
+    const vars = mergeVars(theme.vars, fm, language());
+    const opts = printOptionsFor(
+      theme,
+      bandHTML(theme.header, m, vars, title, language()),
+      bandHTML(theme.footer, m, vars, title, language()),
+    );
+    return generate(html, opts, this.app.vault);
   }
 
   async export(
@@ -333,16 +365,6 @@ export default class PressmarkPlugin extends Plugin {
         title = titleFor(sep.fields, sep.body, file.basename);
         body = await renderBody(this.app, sep.body, file.path, comp);
       }
-      const html = documentHTML(title, body, theme);
-
-      const m = theme.page?.margin;
-      const vars = mergeVars(theme.vars, fm, language());
-      const opts = printOptionsFor(
-        theme,
-        bandHTML(theme.header, m, vars, title, language()),
-        bandHTML(theme.footer, m, vars, title, language()),
-      );
-
       // Asked before rendering would leave the user staring at a dialog with
       // nothing behind it; asked after, the document is ready the moment they
       // pick a name.
@@ -352,7 +374,7 @@ export default class PressmarkPlugin extends Plugin {
         return; // cancelled: no file, no notice, nothing half-written
       }
 
-      const pdf = await generate(html, opts, this.app.vault);
+      const pdf = await this.makePdf(theme, title, body, fm);
       // The Uint8Array goes straight in: fs.writeFile honours byteOffset and
       // byteLength, so a Node Buffer that is a view into a larger shared pool
       // still writes only its own bytes. It is `.buffer` that would hand over
