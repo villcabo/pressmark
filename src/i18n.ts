@@ -9,7 +9,6 @@
  * not having them: they end up wrong and nobody notices. Adding one means
  * adding an entry here; missing keys fall through to English on their own.
  */
-import { getLanguage } from "obsidian";
 import { resolve } from "./locale";
 
 const EN = {
@@ -33,14 +32,16 @@ const EN = {
   "modal.cancel": "Cancel",
   "modal.export": "Export to PDF",
   "modal.formatError": "Could not load the format: {e}",
-  "preview.morePages": "{n} more page(s) not shown",
+  "preview.rendering": "Rendering…",
+  "preview.error": "Could not render the preview: {e}",
+  "preview.notAPdf": "the printer returned something that is not a PDF",
   "info.portrait": "portrait",
   "info.landscape": "landscape",
   "info.margins": "margins",
   "info.withCover": "with cover",
   "info.withoutCover": "without cover",
   "info.withFooter": "with footer",
-  "info.pages": "~{n} page(s)",
+  "info.pages": "{n} page(s)",
   "info.custom": "custom",
   "set.export": "Export",
   "set.themePack": "Theme pack",
@@ -122,14 +123,16 @@ const ES: Partial<Record<Key, string>> = {
   "modal.cancel": "Cancelar",
   "modal.export": "Exportar a PDF",
   "modal.formatError": "No pude cargar el formato: {e}",
-  "preview.morePages": "{n} carilla(s) más, no mostradas",
+  "preview.rendering": "Generando…",
+  "preview.error": "No pude generar la vista previa: {e}",
+  "preview.notAPdf": "la impresión devolvió algo que no es un PDF",
   "info.portrait": "vertical",
   "info.landscape": "horizontal",
   "info.margins": "márgenes",
   "info.withCover": "con portada",
   "info.withoutCover": "sin portada",
   "info.withFooter": "con pie",
-  "info.pages": "~{n} carilla(s)",
+  "info.pages": "{n} carilla(s)",
   "info.custom": "propio",
   "set.export": "Exportación",
   "set.themePack": "Theme pack",
@@ -193,12 +196,17 @@ const LANGUAGES: Record<string, Partial<Record<Key, string>>> = { en: EN, es: ES
 let current: Partial<Record<Key, string>> = EN;
 let locale = "en";
 
-/** Called once when the plugin loads. */
-export function initLanguage(): string {
-  // getLanguage() is official API as of 1.8.7, which the manifest requires.
-  // Reading the app's own private storage would work too, but it reaches into
-  // internals for something the API already exposes.
-  locale = getLanguage() || "en";
+/**
+ * Called once when the plugin loads.
+ *
+ * The locale is passed IN rather than read from `getLanguage()` here. That is
+ * not indirection for its own sake: the `obsidian` package ships types and no
+ * runtime, so a module that imports it cannot be run in a test at all. Keeping
+ * this one free of it is what makes every string in the file testable, and it
+ * costs the single caller one argument.
+ */
+export function initLanguage(locale_: string): string {
+  locale = locale_ || "en";
   // Reuses the same fallback chain as the theme packs, so the UI and the
   // document never end up in different languages.
   const available: Record<string, string> = {};

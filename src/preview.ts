@@ -1,270 +1,259 @@
 /**
  * The live document preview.
  *
- * Shared by the export modal and the theme designer: three copies of a
- * renderer would drift, and a preview that stops matching the export is worse
- * than no preview at all.
+ * It shows the **actual PDF**, produced by the same `printToPDF` call the
+ * export uses, drawn page by page with pdf.js.
  *
- * Two things it takes seriously:
+ * The previous version simulated pages: it measured the document as one
+ * continuous flow and sliced it every page height. That could not work, and
+ * the reason is worth keeping. A continuous flow knows nothing about
+ * `page-break-inside: avoid`, orphans and widows, or a forced cover break —
+ * all of which move whole blocks between pages. The estimate was wrong in both
+ * directions: 3 pages where the PDF had 4, and 27 where it had 16.
  *
- * **Real paper width.** The page is drawn at true paper size and then scaled.
- * Rendering into a narrower box would re-lay-out the document — different
- * column width, different line breaks — and the preview would stop predicting
- * the PDF.
- *
- * **Real sheets.** Each page is its own sheet with a gap between, the way a PDF
- * viewer shows them, rather than one long scroll with a line drawn across it.
- * The header and footer are drawn on every sheet, because in the PDF they are
- * put there by printToPDF and would otherwise never appear in the preview.
+ * A preview that disagrees with the export is worse than no preview, so the
+ * fix was not a better estimate. It was to stop estimating.
  */
-import { bandHTML, documentHTML, mergeVars } from "./document";
-import { paperSize, toInches } from "./paper";
+import { captionFor } from "./caption";
+import { looksLikePdf } from "./pdf-info";
+import { closePdf, openPdf, type PdfDocument } from "./pdfjs";
 import type { Resolved } from "./theme";
-import { t, language } from "./i18n";
+import { t } from "./i18n";
 
-/** CSS pixels per inch: the unit Chromium lays out in. */
-const PX_PER_INCH = 96;
+/** Produces the PDF bytes for a theme and an already-rendered body. */
+export type PdfMaker = (theme: Resolved, title: string, bodyHTML: string) => Promise<Uint8Array>;
+
+/** "fit" tracks the pane's width; a number is a literal scale factor. */
+export type Zoom = "fit" | number;
 
 /**
- * Sheets rendered at most.
+ * How long to wait before printing again.
  *
- * Each one parses the document again, so a hundred-page note would cost a
- * hundred layouts. Nobody judges a format past the first few pages.
+ * Every render is a real print, so it is not free. Dragging a colour picker
+ * fires continuously; this prints once the hand stops.
  */
-const MAX_SHEETS = 12;
+const DEBOUNCE_MS = 350;
 
-export interface PreviewParts {
-  canvas: HTMLElement;
-  info: HTMLElement;
-}
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+
+/** Gap between sheets, and the padding around them, in CSS pixels. */
+const GUTTER = 22;
 
 export class Preview {
-  private canvas: HTMLElement;
-  private stage: HTMLElement;
-  private sheets: HTMLElement;
+  private scroller: HTMLElement;
   private info: HTMLElement;
-  private probe: HTMLIFrameElement;
-  private pages = 1;
-  private zoom: "fit" | number = "fit";
-  private lastWidthPx = 0;
-  private contentPx = 1;
-  private marginTopPx = 0;
 
-  constructor(parent: HTMLElement) {
-    this.canvas = parent.createDiv({ cls: "pressmark-canvas" });
-    // Sized to the SCALED pages: transform does not change layout size, so this
-    // is what gives them something to be centred as.
-    this.stage = this.canvas.createDiv({ cls: "pressmark-stage" });
-    // Two elements on purpose: the stage carries the SCALED size so it can be
-    // centred, and the inner one carries the transform. Doing both on one
-    // element scales it twice and the page vanishes.
-    this.sheets = this.stage.createDiv({ cls: "pressmark-sheets" });
+  private doc: PdfDocument | null = null;
+  private zoom: Zoom = "fit";
+  /** One placeholder per page, in order; each gets a canvas when it comes near. */
+  private slots: HTMLElement[] = [];
+  private seen: IntersectionObserver | null = null;
+
+  private timer: number | null = null;
+  /** Bumped per print, so a slow render started earlier can never win. */
+  private generation = 0;
+
+  constructor(
+    parent: HTMLElement,
+    private make: PdfMaker,
+  ) {
+    this.scroller = parent.createDiv({ cls: "pressmark-pdf" });
     this.info = parent.createDiv({ cls: "pressmark-info" });
-
-    // Measures the document's height off-screen so the page count is known
-    // before any sheet is built.
-    this.probe = parent.createEl("iframe", { cls: "pressmark-probe" });
-    this.probe.setAttr("sandbox", "allow-same-origin");
   }
 
-  get parts(): PreviewParts {
-    return { canvas: this.canvas, info: this.info };
+  get infoEl(): HTMLElement {
+    return this.info;
+  }
+
+  /** Schedules a print. Repeated calls collapse into one. */
+  render(theme: Resolved, title: string, bodyHTML: string): void {
+    if (this.timer !== null) window.clearTimeout(this.timer);
+    this.info.setText(t("preview.rendering"));
+    this.timer = window.setTimeout(() => {
+      void this.print(theme, title, bodyHTML);
+    }, DEBOUNCE_MS);
+  }
+
+  private async print(theme: Resolved, title: string, bodyHTML: string): Promise<void> {
+    const mine = ++this.generation;
+    try {
+      const bytes = await this.make(theme, title, bodyHTML);
+      if (mine !== this.generation) return;
+
+      if (!looksLikePdf(bytes)) {
+        this.fail(t("preview.notAPdf"));
+        return;
+      }
+
+      const doc = await openPdf(bytes);
+      if (mine !== this.generation) {
+        void closePdf(doc);
+        return;
+      }
+
+      if (this.doc) void closePdf(this.doc);
+      this.doc = doc;
+      // The count comes from the document itself, not from arithmetic.
+      this.info.setText(captionFor(theme, doc.numPages));
+      this.layout();
+    } catch (e) {
+      if (mine !== this.generation) return;
+      console.error("pressmark:", e);
+      this.fail(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  private fail(reason: string): void {
+    this.scroller.empty();
+    this.slots = [];
+    this.info.setText(t("preview.error", { e: reason }));
+  }
+
+  // ── Drawing ──────────────────────────────────────────────────────────────
+
+  /**
+   * Builds one correctly-sized placeholder per page and lets the observer fill
+   * them in as they come into view.
+   *
+   * Sizing the placeholders up front rather than growing them as pages arrive
+   * is what keeps the scrollbar from jumping under the user's hand, and it is
+   * cheap: page dimensions come from the PDF without rasterising anything.
+   */
+  private layout(): void {
+    const doc = this.doc;
+    if (!doc) return;
+
+    this.seen?.disconnect();
+    this.scroller.empty();
+    this.slots = [];
+
+    const mine = this.generation;
+    this.seen = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const el = entry.target as HTMLElement;
+          this.seen?.unobserve(el);
+          void this.paint(el, this.slots.indexOf(el) + 1, mine);
+        }
+      },
+      // A screenful of lead time: by the time a page is scrolled to, it is drawn.
+      { root: this.scroller, rootMargin: "100% 0px" },
+    );
+
+    void this.size(doc, mine);
+  }
+
+  /** Measures every page and creates its placeholder at the right size. */
+  private async size(doc: PdfDocument, mine: number): Promise<void> {
+    const scale = await this.scaleFor(doc);
+    if (mine !== this.generation) return;
+
+    for (let n = 1; n <= doc.numPages; n++) {
+      const { width, height } = (await doc.getPage(n)).getViewport({ scale });
+      if (mine !== this.generation) return;
+
+      const slot = this.scroller.createDiv({ cls: "pressmark-sheet" });
+      slot.setCssStyles({ width: `${Math.round(width)}px`, height: `${Math.round(height)}px` });
+      this.slots.push(slot);
+      this.seen?.observe(slot);
+    }
   }
 
   /**
-   * Alt + wheel zooms, the way every design tool does.
+   * The scale to draw at.
    *
-   * Alt rather than Ctrl: Ctrl+wheel is the browser's own page zoom, and
-   * fighting it would break the rest of the app in the same window.
+   * "fit" is measured off the first page rather than assumed: a landscape or
+   * A3 theme has a different aspect, and a fixed guess would either overflow
+   * the pane or leave half of it empty.
    */
-  enableWheelZoom(onChange?: (factor: number) => void): void {
-    this.canvas.addEventListener(
+  private async scaleFor(doc: PdfDocument): Promise<number> {
+    if (this.zoom !== "fit") return this.zoom;
+    const natural = (await doc.getPage(1)).getViewport({ scale: 1 }).width;
+    const available = this.scroller.clientWidth - GUTTER * 2;
+    if (available <= 0 || natural <= 0) return 1;
+    return available / natural;
+  }
+
+  /** Rasterises one page into its placeholder. */
+  private async paint(slot: HTMLElement, pageNumber: number, mine: number): Promise<void> {
+    const doc = this.doc;
+    if (!doc || mine !== this.generation || pageNumber < 1) return;
+
+    const page = await doc.getPage(pageNumber);
+    if (mine !== this.generation) return;
+
+    const viewport = page.getViewport({ scale: await this.scaleFor(doc) });
+    // Drawn at device resolution and scaled back down by CSS: on a HiDPI screen
+    // a canvas sized in CSS pixels renders the text visibly soft.
+    const dpr = window.devicePixelRatio || 1;
+    const canvas = slot.createEl("canvas");
+    canvas.width = Math.round(viewport.width * dpr);
+    canvas.height = Math.round(viewport.height * dpr);
+    canvas.setCssStyles({ width: `${Math.round(viewport.width)}px`, height: "auto" });
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    await page.render({ canvas, canvasContext: ctx, viewport, transform: [dpr, 0, 0, dpr, 0, 0] })
+      .promise;
+  }
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+
+  setZoom(z: Zoom): void {
+    this.zoom = z === "fit" ? "fit" : clamp(z);
+    // Re-laid out rather than CSS-scaled: scaling a bitmap up is exactly the
+    // blur the user would be zooming in to get rid of.
+    this.layout();
+  }
+
+  currentZoom(): Zoom {
+    return this.zoom;
+  }
+
+  /**
+   * Alt + wheel zooms.
+   *
+   * Alt and not Ctrl: Ctrl + wheel is the whole app's zoom in Obsidian, and
+   * stealing it inside one pane would surprise anyone who uses it elsewhere.
+   * `onChange` reports the factor back so the dropdown can show the real
+   * percentage instead of blanking on a value no preset matches.
+   */
+  enableWheelZoom(onChange: (factor: number) => void): void {
+    this.scroller.addEventListener(
       "wheel",
-      (e) => {
+      (e: WheelEvent) => {
         if (!e.altKey) return;
         e.preventDefault();
-        const next = clamp(this.factor() * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+        const from = this.zoom === "fit" ? this.fitFactor() : this.zoom;
+        const next = clamp(from * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
         this.setZoom(next);
-        onChange?.(next);
+        onChange(next);
       },
       { passive: false },
     );
   }
 
-  setZoom(zoom: "fit" | number): void {
-    this.zoom = zoom;
-    this.applyScale();
+  /** The factor "fit" currently resolves to, so wheel zoom starts from what is on screen. */
+  private fitFactor(): number {
+    const drawn = this.slots[0]?.clientWidth ?? 0;
+    const available = this.scroller.clientWidth - GUTTER * 2;
+    return drawn > 0 && available > 0 ? drawn / available : 1;
   }
 
-  render(theme: Resolved, title: string, bodyHTML: string, opts: { fill?: boolean } = {}): void {
-    let w = 8.27;
-    let h = 11.69;
-    try {
-      [w, h] = paperSize(theme.page);
-    } catch {
-      /* surfaced in the caption */
-    }
-    if (theme.page?.orientation === "landscape") [w, h] = [h, w];
-
-    const widthPx = w * PX_PER_INCH;
-    const heightPx = h * PX_PER_INCH;
-    this.lastWidthPx = widthPx;
-    this.canvas.toggleClass("is-filling", opts.fill === true);
-
-    const html = documentHTML(title, bodyHTML, theme, true);
-
-    // What actually fits on a page: the sheet minus the margins the PDF puts
-    // on EVERY page. Slicing at the full page height is what let text run
-    // through where the margins belong and the footer land on top of it.
-    const mt = inchesOf(theme.page?.margin?.top) * PX_PER_INCH;
-    const mb = inchesOf(theme.page?.margin?.bottom) * PX_PER_INCH;
-    this.contentPx = Math.max(120, heightPx - mt - mb);
-    this.marginTopPx = mt;
-
-    this.probe.setCssStyles({ width: `${widthPx}px` });
-    this.probe.srcdoc = html;
-    this.probe.onload = () => {
-      const doc = this.probe.contentDocument;
-      const content = Math.max(doc?.body.scrollHeight ?? 0, 1);
-      this.pages = Math.max(1, Math.ceil(content / this.contentPx));
-      this.buildSheets(theme, title, html, widthPx, heightPx);
-      this.applyScale();
-      this.caption(theme);
-    };
-  }
-
-  /** One sheet per page, each showing its slice of the same document. */
-  private buildSheets(
-    theme: Resolved,
-    title: string,
-    html: string,
-    widthPx: number,
-    heightPx: number,
-  ): void {
-    this.sheets.empty();
-    const shown = Math.min(this.pages, MAX_SHEETS);
-    const vars = mergeVars(theme.vars, null, language());
-    const margin = theme.page?.margin;
-
-    for (let i = 0; i < shown; i++) {
-      const sheet = this.sheets.createDiv({ cls: "pressmark-sheet" });
-      sheet.setCssStyles({ width: `${widthPx}px`, height: `${heightPx}px` });
-
-      // The content box, not the sheet, is what clips. Clipping at the sheet
-      // let each page show a full page height of document while advancing only
-      // one content height, so consecutive sheets repeated the margins' worth
-      // of text. Measured, not guessed: three sheets went p0-p18, p18-p38,
-      // p37-p57 before this, and p0-p18, p19-p37, p38-p56 after.
-      const box = sheet.createDiv({ cls: "pressmark-page" });
-      box.setCssStyles({ top: `${this.marginTopPx}px`, height: `${this.contentPx}px` });
-
-      const frame = box.createEl("iframe", { cls: "pressmark-preview" });
-      frame.setAttr("sandbox", "allow-same-origin");
-      frame.srcdoc = html;
-      // The same document in every sheet, shifted so each shows its own page.
-      frame.setCssStyles({
-        width: `${widthPx}px`,
-        height: `${this.contentPx * this.pages}px`,
-        top: `${-i * this.contentPx}px`,
-      });
-
-      this.band(sheet, "header", theme, title, vars, margin, i + 1);
-      this.band(sheet, "footer", theme, title, vars, margin, i + 1);
-    }
-
-    if (this.pages > shown) {
-      this.sheets.createDiv({
-        cls: "pressmark-more",
-        text: t("preview.morePages", { n: this.pages - shown }),
-      });
-    }
-  }
-
-  /**
-   * Draws a header or footer onto a sheet.
-   *
-   * In the PDF these are put there by printToPDF, outside the document, which
-   * is why they never showed up in the preview. Here the page placeholders are
-   * filled with real numbers rather than the spans Chrome fills in itself.
-   */
-  private band(
-    sheet: HTMLElement,
-    which: "header" | "footer",
-    theme: Resolved,
-    title: string,
-    vars: Record<string, string>,
-    margin: Resolved["page"] extends undefined ? never : NonNullable<Resolved["page"]>["margin"],
-    page: number,
-  ): void {
-    const band = which === "header" ? theme.header : theme.footer;
-    if (!band?.enabled) return;
-
-    const html = bandHTML(band, margin, vars, title, language())
-      .replace(/<span class="pageNumber"><\/span>/g, String(page))
-      .replace(/<span class="totalPages"><\/span>/g, String(this.pages))
-      .replace(/<span class="date"><\/span>/g, new Date().toLocaleDateString())
-      .replace(/<span class="url"><\/span>/g, "");
-
-    // Parsed rather than assigned to innerHTML. bandHTML() escapes the values
-    // it interpolates, but "it is safe because I wrote it" is exactly the
-    // assumption the rule exists to stop, and parsing says so explicitly.
-    const parsed = new DOMParser().parseFromString(html, "text/html");
-    const el = sheet.createDiv({ cls: `pressmark-band is-${which}` });
-    for (const node of Array.from(parsed.body.childNodes)) {
-      el.appendChild(document.importNode(node, true));
-    }
-  }
-
-  private factor(): number {
-    if (this.zoom !== "fit") return this.zoom;
-    const available = this.canvas.clientWidth;
-    if (!available || !this.lastWidthPx) return 1;
-    // Room for the scrollbar, so fitting does not itself cause one.
-    return clamp((available - 28) / this.lastWidthPx);
-  }
-
-  private applyScale(): void {
-    if (!this.lastWidthPx) return;
-    const f = this.factor();
-    // setCssStyles for real properties, setCssProps for the variable: they are
-    // different methods, and sending `top` or `transform` through the latter
-    // is silently ignored — which is why every sheet was showing page one.
-    this.sheets.setCssStyles({ transform: `scale(${f})` });
-    this.sheets.setCssProps({ "--pm-scale": String(f) });
-    this.stage.setCssStyles({
-      width: `${this.lastWidthPx * f}px`,
-      height: `${this.sheets.scrollHeight * f}px`,
-    });
-    this.stage.setCssProps({ "--pm-scale": String(f) });
-  }
-
-  private caption(theme: Resolved): void {
-    const m = theme.page?.margin;
-    const size = typeof theme.page?.size === "string" ? theme.page.size : t("info.custom");
-    const orientation =
-      theme.page?.orientation === "landscape" ? t("info.landscape") : t("info.portrait");
-    this.info.setText(
-      [
-        size,
-        orientation,
-        `${t("info.margins")} ${m?.top ?? "?"} ${m?.right ?? "?"} ${m?.bottom ?? "?"} ${m?.left ?? "?"}`,
-        theme.cover?.enabled ? t("info.withCover") : t("info.withoutCover"),
-        ...(theme.footer?.enabled ? [t("info.withFooter")] : []),
-        t("info.pages", { n: this.pages }),
-      ].join(" · "),
-    );
+  /** A preview that outlives its view would hold the whole document open. */
+  destroy(): void {
+    if (this.timer !== null) window.clearTimeout(this.timer);
+    this.generation++;
+    this.seen?.disconnect();
+    this.seen = null;
+    if (this.doc) void closePdf(this.doc);
+    this.doc = null;
+    this.slots = [];
   }
 }
 
 function clamp(f: number): number {
-  return Math.max(0.1, Math.min(3, f));
-}
-
-/** A margin as inches, tolerating a missing or malformed value. */
-function inchesOf(v: string | undefined): number {
-  try {
-    return toInches(v);
-  } catch {
-    return 0;
-  }
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, f));
 }
